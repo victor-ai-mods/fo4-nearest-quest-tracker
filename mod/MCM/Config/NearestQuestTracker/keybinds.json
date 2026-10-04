@@ -1,0 +1,49 @@
+{
+    "modName": "NearestQuestTracker",
+    "keybinds": [
+        {
+            "id": "TrackNearestHotkey",
+            "desc": "$NQT_KEY_TRACK_NEAREST",
+            "action": {
+                "type": "CallFunction",
+                "form": "NearestQuestTracker.esp|800",
+                "scriptName": "NQT_MainScript",
+                "function": "TrackNearest",
+                "params": []
+            }
+        },
+        {
+            "id": "ShowStartHotkey",
+            "desc": "$NQT_KEY_SHOW_START",
+            "action": {
+                "type": "CallFunction",
+                "form": "NearestQuestTracker.esp|800",
+                "scriptName": "NQT_MainScript",
+                "function": "ShowNearestStart",
+                "params": []
+            }
+        },
+        {
+            "id": "ExcludeHotkey",
+            "desc": "$NQT_KEY_EXCLUDE",
+            "action": {
+                "type": "CallFunction",
+                "form": "NearestQuestTracker.esp|800",
+                "scriptName": "NQT_MainScript",
+                "function": "ExcludeCurrent",
+                "params": []
+            }
+        },
+        {
+            "id": "RestoreHotkey",
+            "desc": "$NQT_KEY_RESTORE",
+            "action": {
+                "type": "CallFunction",
+                "form": "NearestQuestTracker.esp|800",
+                "scriptName": "NQT_MainScript",
+                "function": "RestoreLast",
+                "params": []
+            }
+        }
+    ]
+}

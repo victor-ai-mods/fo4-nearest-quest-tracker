@@ -1,0 +1,26 @@
+{
+    "_comment": [
+        "Nearest Quest Tracker: your own quest start points (for quests from other mods, or to fix a vanilla one).",
+        "Copy this file to QuestStarts-user.json in this folder. The example file itself is never read.",
+        "One object per quest start:",
+        "  \"quest\"  - the quest, \"Plugin.esp|ID\"; ID is the FormID as xEdit shows it: 0F12, 00000F12, 01000F12 or FE001F12 (ESL) all work.",
+        "  \"ref\"    - the placed reference (NPC, activator, door, ...) where the quest starts, \"Plugin.esp|ID\".",
+        "             Best is a persistent reference: a temporary one is only known to the game while its cell is loaded.",
+        "  \"after\"  - optional: quests that must be completed first, [\"Plugin.esp|ID\", ...]; an element can also be",
+        "             a list of quests of which any one will do: [\"Plugin.esp|A\", [\"Plugin.esp|B\", \"Plugin.esp|C\"]].",
+        "  \"objective\" - optional: the quest counts as started once THIS objective has been shown (several entries",
+        "             for one quest, e.g. one per note that starts one objective).",
+        "  \"stage\"  - optional: the quest counts as started once this stage is done (for quests that show no objective).",
+        "  \"radio\"  - optional: \"ref\" is a radio transmitter and the quest starts when its signal is picked up;",
+        "             the value is the reception radius in game units (distances are measured to its edge).",
+        "The quest counts as started (and its start point is no longer shown) once it is completed or any of",
+        "its objectives has been shown in the Pip-Boy (unless \"objective\" or \"stage\" says otherwise).",
+        "A quest can have several entries; entries for a quest in this file replace all QuestStarts.json entries for it.",
+        "\"world\", \"pos\", \"anchor\" (a persistent ref) can be given for a place on the map while the ref is not loaded;",
+        "without them the start is offered only when the ref is loaded near the player.",
+        "Example (the plugin is made up):",
+        "  {\"quest\": \"MyQuestMod.esp|000F12\", \"ref\": \"MyQuestMod.esp|000F99\"}"
+    ],
+    "starts": [
+    ]
+}

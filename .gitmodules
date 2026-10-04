@@ -1,0 +1,3 @@
+[submodule "f4se_plugin/extern/CommonLibF4"]
+	path = f4se_plugin/extern/CommonLibF4
+	url = https://github.com/alandtse/CommonLibF4.git

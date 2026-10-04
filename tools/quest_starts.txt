@@ -1,0 +1,159 @@
+# Точки старта не начатых квестов (этап 3a) — исходник для tools/gen_quest_starts.py.
+# Отобрано вручную по вики fallout.fandom.com (инфобокс «given by» + описание начала квеста)
+# и сверено с Fallout4.esm/DLC (tools/esm_index.py, tools/quest_starts_research.py).
+#
+# Строка: <EDID квеста> <ref квестодателя> [after=<EDID>[,<EDID>...]] [radio=<радиус>]  # комментарий
+#   ref    — "Plugin.esm|XXXXXX" (локальный FormID размещённого NPC/объекта) или EDID ref'а.
+#   after  — квест(ы), которые должны быть завершены, иначе квестодатель квест не даёт.
+#   radio  — ref — радиопередатчик: квест начинается, когда игрок ловит его сигнал; радиус приёма
+#            (XRDO, тип «радиус») в единицах игры. Цель маркера: «послушать радио <станция>».
+#   after=A|B,C — «A или B», и C.
+#   objective=N — квест начат, когда показана цель N (у квеста может быть несколько строк: по ref на цель).
+#   stage=N     — квест начат, когда пройдена стадия N (квест без целей в Pip-Boy).
+#   inside      — к ref нет пути через двери (Институт — только телепорт): точки на карте нет, старт
+#                 предлагается, только когда ref загружен рядом с игроком.
+# У квеста может быть несколько строк (несколько квестодателей / передатчиков) — выбирается ближайшая доступная.
+#
+# Не включены (решение 2026-09-30, пересмотрено 2026-10-01 по списку ru-вики — полный разбор с причинами:
+# _research\nqt-quests\quest_starts_coverage.md, невозможные — quest_starts_impossible.md):
+#   - радиантные и повторяемые квесты, основной сюжет и основные цепочки фракций/DLC (приходят сами
+#     из предыдущего квеста; побочные квесты фракций включены с after);
+#   - радио, слышное везде (Automatron, Ядер-Мир, Волт-Тек, Радио Свободы): игра сама показывает
+#     в Pip-Boy цель «послушать радио»; радио, которое переносят в случайное место (Shipbreaker).
+#   - NPC сам подходит к игроку (Эдвард Диган — «Особая доставка», Перл — «Смерть мозга»);
+#   - unmarked-квесты (нет записи в Pip-Boy) — пока; с полем stage=N их можно добавить;
+#   - квесты спутников по симпатии, «Свадьба».
+
+# --- Содружество: Убежище 81 ---
+V81_00_Intro            Fallout4.esm|02A834                       # Vault 81 — смотритель МакНамара (вход в Убежище 81)
+V81_01                  Fallout4.esm|02A832  after=V81_00_Intro   # Here Kitty, Kitty — Эрин Комбс
+MS19                    Fallout4.esm|02A826  after=V81_00_Intro   # Hole in the Wall — доктор Пенске
+V81_03                  Fallout4.esm|02A82C  after=MS19           # Dependency — Тина Де Лука
+V81_04                  Fallout4.esm|02A828  after=V81_00_Intro   # Short Stories — Кэти Пинн
+
+# --- Содружество: Даймонд-Сити ---
+MS13                    Fallout4.esm|002F16                       # Diamond City Blues — Пол Пемброк
+MS14                    Fallout4.esm|002EFD                       # Confidence Man — Вадим Бобров (Дагаут-Инн)
+FFDiamondCity01         Fallout4.esm|002F29                       # Painting the Town — Эббот
+FFDiamondCity03         Fallout4.esm|002CBD                       # Botany Class — Соломон
+FFDiamondCity04         Fallout4.esm|002F03                       # Pool Cleaning — Шэн Каволски
+FFDiamondCity05         Fallout4.esm|002EF9                       # Fly Fishing — доктор Дафф
+FFDiamondCity06         Fallout4.esm|002CAE                       # Out in Left Field — Мо Кронин
+FFDiamondCity07         Fallout4.esm|002F1F                       # Story of the Century — Пайпер
+FFDiamondCity08         Fallout4.esm|002F07                       # Nuka Cola Needs — Шеффилд
+
+# --- Содружество: Добрососедство ---
+MS04                    Fallout4.esm|0228AC                       # The Silver Shroud — Кент Коннолли
+MS16                    Fallout4.esm|02768A                       # The Big Dig — Бобби Безносая
+DialogueGoodneighborRufus Fallout4.esm|181E01                     # Trouble Brewin' — Руфус Рубинс
+FFGoodneighbor02        Fallout4.esm|022953                       # Public Knowledge — Дейзи
+FFGoodneighbor03        Fallout4.esm|0226DA                       # Hazardous Material — Фред Аллен
+FFGoodneighbor04        Fallout4.esm|022688                       # The Cleaner — Уайтчепел Чарли
+FFGoodneighbor05        Fallout4.esm|022615                       # Art Appreciation — Хэнкок
+
+# --- Содружество: Банкер-Хилл ---
+FFBunkerHill01          Fallout4.esm|019984                       # Fallen Hero — Джо Саволди
+FFBunkerHill02          Fallout4.esm|01997D                       # Traffic Jam — Деб
+FFBunkerHill03          Fallout4.esm|01995E                       # Prep School — Кесслер
+
+# --- Содружество: остальное ---
+MS01                    Fallout4.esm|028653                       # Kid in a Fridge — Билли Пибоди
+MS02                    Fallout4.esm|0341FC                       # Here There Be Monsters — Донни Ковальски
+MS11                    Fallout4.esm|0995A3                       # Last Voyage of the U.S.S. Constitution — Наблюдатель
+MS17                    Fallout4.esm|039FD5                       # Human Error — Честный Дэн (у Ковенанта)
+DN015                   Fallout4.esm|028FAD                       # Cambridge Polymer Labs — Молли
+DN049                   Fallout4.esm|0FD4C2                       # Galleria — робот-встречающий
+DN054                   Fallout4.esm|11685B                       # Atom Cats — Зик
+DN079                   Fallout4.esm|03D84A                       # Mystery Meat — Теодор Коллинз
+DN121                   Fallout4.esm|045C35                       # Out of the Fire — Авраам Финч
+DN138                   Fallout4.esm|1073F1                       # Pull the Plug — Салли Мэтис
+DN151                   Fallout4.esm|020A4A                       # Troubled Waters — Супервайзер Уайт (Грейгарден)
+DN154                   Fallout4.esm|055544                       # Giddyup 'n Go — Арлен Гласс
+DialogueDrumlinDiner    Fallout4.esm|106A00                       # Order Up — Труди (закусочная «Драмлин»)
+Min00                   Fallout4.esm|01A4D7                       # When Freedom Calls — Престон Гарви (Конкорд)
+MinRecruit03            Fallout4.esm|06D3A2                       # Returning the Favor — Блейк Абернати
+
+# --- Содружество: радио (передатчик с радиусом приёма; alias квеста-радио даёт ему имя станции) ---
+# BoS100Radio (start game enabled): BoS100TransmitterScript на алиасе ловит OnPipboyRadioDetection
+# (игрок вошёл в радиус) -> стадия 5 -> BoS100.SetStage(5) -> цель 5. Слушать не обязательно.
+BoS100                  BoS00Transmitter  radio=20000             # Fire Support — военная частота AF95
+# MS10b «Выход на поклон» (start game enabled): алиасы Antenna и AntennaWRVR = эти передатчики. По ru-вики квест
+# начинается, когда пойман сигнал радио Тринити-тауэр или радиостанции WRVR, либо при входе в Тринити-тауэр.
+MS10b                   MS10TrinityTowerAntennaRef  radio=20000       # Curtain Call — радио Тринити-тауэр
+MS10b                   MS10TrinityTowerAntennaRefWRVR  radio=9000    # Curtain Call — радиостанция WRVR
+
+# === Добавлено 2026-10-01 по списку ru-вики (страницы квестов: «кто даёт», «после квеста», описание) ===
+
+# --- Содружество: записки, вход в локацию ---
+# DNMessageInABottleQuest (start game enabled, «Разное»): бутылка N (BOOK MessageInABottle0N, один размещённый
+# REFR у побережья) — цель N (тексты целей = названия книг, сверено по строкам игры).
+DNMessageInABottleQuest Fallout4.esm|1DA03C  objective=1          # Message in a Bottle — «давно в ловушке»
+DNMessageInABottleQuest Fallout4.esm|1DA046  objective=2          # Message in a Bottle — «хищник становится добычей»
+DNMessageInABottleQuest Fallout4.esm|1DA051  objective=3          # Message in a Bottle — «дело плохо»
+DNMessageInABottleQuest Fallout4.esm|1DA059  objective=4          # Message in a Bottle — «нужна помощь»
+DNMessageInABottleQuest Fallout4.esm|1DA061  objective=5          # Message in a Bottle — «трудная мишень»
+DNMessageInABottleQuest Fallout4.esm|1DA064  objective=6          # Message in a Bottle — «место отмечено крестом»
+DN143                   MaldenMiddleSchoolMapMarker               # Vault 75 — вход в Убежище 75 (под школой Малдена)
+DN101                   DN101_PickmansDoor                        # Pickman's Gift — галерея Пикмана (квест даёт Пикман внутри)
+DN070                   JamaicaPlainMapMarkerRef                  # Treasures of Jamaica Plain — Джамейка-Плейн (листовки, дневник Карла)
+MS05B                   SalemMapMarker001                         # Rocky Eggs (Роковые яйца) — Салем, музей ведьм
+DN083_Barney            DN083_BarneySniperPosition                # Gun Run (Ликвидация) — Барни Рук, дом Руков в Салеме
+
+# --- Содружество: Даймонд-сити и Добрососедство ---
+MS07a                   Fallout4.esm|0222A4  after=MQ104          # The Disappearing Act — Элли Перкинс / дело на столе в агентстве
+MS07b                   Fallout4.esm|0222A4  after=MQ104          # The Gilded Grasshopper — голозапись Марти Буллфинча в агентстве
+FFDiamondCity02         GenevaREF                                 # Home Plate (Основная база) — Женева, мэрия
+FFDiamondCity11         DocCrockerREF                             # A New You (Новый облик) — Док Крокер
+FFDiamondCity10         Fallout4.esm|0199D5  after=InstKickOut|MQ302BoS|MQ302Min|MQ302RR|BoS304   # In Sheep's Clothing — Дэнни Салливан
+FFGoodneighbor01        Fallout4.esm|0228A6  after=MQ102          # The Memory Den — Ирма
+FFGoodneighbor06        CompMacCreadyRef                          # Talk to MacCready — Маккриди, «Третий рельс»
+FFGoodneighbor07        Fallout4.esm|022615  after=MS16           # Recruiting Hancock — Хэнкок (после «Раскопок» на стороне Фаренгейт)
+
+# --- Братство Стали (побочные) ---
+BoSM01                  Fallout4.esm|05DE4D  after=BoS101         # The Lost Patrol — паладин Данс
+BoSM02                  Fallout4.esm|01CC15  after=BoSM01,BoS202  # Duty or Dishonor — капитан Келс (Придвен)
+BoSM04                  Fallout4.esm|01CC15  after=BoSM02,BoS301  # A Loose End — капитан Келс
+DLC03Acadia_BoS         Fallout4.esm|01CC15  after=DLC03MQ03,BoS201   # Search and Destroy — капитан Келс (после разговора с ДиМА)
+
+# --- Подземка (побочные; штаб) ---
+RRM01                   Fallout4.esm|050950  after=RR102          # Boston After Dark — доктор Каррингтон
+RRM02                   Fallout4.esm|0508ED  after=RRM01,RRR01b   # Memory Interrupted — Дездемона
+RRR01a                  Fallout4.esm|050950  after=RRM01          # Butcher's Bill — доктор Каррингтон
+RRR01b                  Fallout4.esm|050950  after=RRR01a         # Butcher's Bill 2 — доктор Каррингтон
+RRR04                   Fallout4.esm|0508EC  after=RRM01,MQ206    # Mercer Safehouse — ПАМ
+RRR06                   Fallout4.esm|0678CF  after=RRM01,RRR01a,RRR01b,RRR04   # Randolph Safehouse — Барабанщик
+RRR08                   Fallout4.esm|0508ED  after=MQ302RR|MQ302Min   # To the Mattresses — Дездемона
+
+# --- Институт (побочные; в Институт только телепорт — inside) ---
+InstM01                 Fallout4.esm|061C36  after=MQ207  inside  # Building a Better Crop — Айзек Карлин
+InstM02                 Fallout4.esm|061C37  after=Inst303  inside    # Plugging a Leak — Джастин Айо
+InstM03                 Fallout4.esm|061C3B  after=Inst303  inside    # A House Divided — Ньютон Оберли
+# Мосли в ESM — выключенная заготовка в мире Фар-Харбора, в Институт его ставит скрипт: только inside.
+DLC03Acadia_Institute   DLCCoast.esm|02F3F7  after=DLC03MQ03,MQ207  inside   # Forbidden Knowledge — доктор Мосли
+
+# --- Фар-Харбор ---
+DLC03FarHarborFF01      DLCCoast.esm|005C96                       # Blood Tide — Кэсси Далтон
+DLC03FarHarborFF02      DLCCoast.esm|005C82                       # Safe Passage — капитан Эйвери
+DLC03FarHarborFF03a     DLCCoast.esm|005C92                       # Hull Breach — Марина
+DLC03FarHarborS01       DLCCoast.esm|005CA0                       # The Hold Out — Митч
+DLC03FarHarborS02       DLCCoast.esm|005C84                       # Turn Back the Fog — Малышка Берта
+DLC03FarHarborS03       DLCCoast.esm|005C92  after=DLC03FarHarborFF03a   # The Great Hunt — Марина
+DLC03FarHarborM01       DLCCoast.esm|005C98  after=DLC03FarHarborM02     # Rite of Passage — Тедди Райт
+DLC03AcadiaM01          DLCCoast.esm|005426                       # The Arrival — Чейз (Акадия)
+DLC03AcadiaM02          DLCCoast.esm|005429                       # Hunting the Hunter — Деджен
+DLC03AcadiaM03          DLCCoast.esm|00542A                       # Data Recovery — Фарадей
+DLC03AcadiaM04          DLCCoast.esm|005428                       # The Price of Memory — Ког
+DLC03CoA_FFNucleus01    DLCCoast.esm|00447E                       # The Trial of Brother Devin — зелот Уэр (Ядро)
+DLC03CoA_FFNucleus02    DLCCoast.esm|004485                       # Witch Hunt — верховный исповедник Тектус
+DLC03CoA_FFNucleus03    DLCCoast.esm|004479                       # Ablutions — сестра Май
+DLC03AtomM01            DLCCoast.esm|00449D  after=DLC03MQ03      # Visions in the Fog — великий зилот Рихтер
+DLC03AtomM02            DLCCoast.esm|00449D  after=DLC03AtomM01   # The Heretic — великий зилот Рихтер
+DLC03FarHarborFF03b     DLCCoast.esm|005C92  after=DLC03FarHarborFF03a,DLC03FarHarborM01   # Hull Breach 2 — Марина
+DLC03FarHarborFF03c     DLCCoast.esm|005C92  after=DLC03FarHarborFF03b   # Hull Breach 3 — Марина
+
+# --- Нюка-Мир ---
+DLC04MS01               DLCNukaWorld.esm|013A50                   # Cappy in a Haystack — Сьерра Петровита
+DLC04MS02               DLCNukaWorld.esm|00CC9D                   # Trip to the Stars — Дара Хаббелл
+DLC04SafariAdventureQuest DLCNukaWorld.esm|0260E6                 # Safari Adventure — Сито
+DLC04SettlementFF02     DLCNukaWorld.esm|0234A3                   # Precious Medals — ЛИЯ (Ядер-Таун)
+DLC04RaiderKickout      DLCNukaWorld.esm|01FB00  after=DLC04MQ01  # Open Season — Маккензи Бриджман (рынок Ядер-Тауна)

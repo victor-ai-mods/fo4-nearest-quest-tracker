@@ -1,0 +1,168 @@
+{
+    "modName": "NearestQuestTracker",
+    "displayName": "$NQT_MOD_NAME",
+    "minMcmVersion": 2,
+    "pluginRequirements": [
+        "NearestQuestTracker.esp"
+    ],
+    "content": [
+        {
+            "type": "text",
+            "text": "$NQT_ABOUT"
+        },
+        {
+            "type": "spacer"
+        },
+        {
+            "type": "section",
+            "text": "$NQT_SEC_KEYS"
+        },
+        {
+            "id": "TrackNearestHotkey",
+            "type": "hotkey",
+            "text": "$NQT_KEY_TRACK_NEAREST",
+            "help": "$NQT_KEY_TRACK_NEAREST_HELP"
+        },
+        {
+            "id": "ShowStartHotkey",
+            "type": "hotkey",
+            "text": "$NQT_KEY_SHOW_START",
+            "help": "$NQT_KEY_SHOW_START_HELP"
+        },
+        {
+            "id": "ExcludeHotkey",
+            "type": "hotkey",
+            "text": "$NQT_KEY_EXCLUDE",
+            "help": "$NQT_KEY_EXCLUDE_HELP"
+        },
+        {
+            "id": "RestoreHotkey",
+            "type": "hotkey",
+            "text": "$NQT_KEY_RESTORE",
+            "help": "$NQT_KEY_RESTORE_HELP"
+        },
+        {
+            "type": "spacer"
+        },
+        {
+            "type": "section",
+            "text": "$NQT_SEC_MAIN"
+        },
+        {
+            "type": "switcher",
+            "text": "$NQT_UNTRACK_OTHERS",
+            "help": "$NQT_UNTRACK_OTHERS_HELP",
+            "valueOptions": {
+                "sourceType": "GlobalValue",
+                "sourceForm": "NearestQuestTracker.esp|801"
+            }
+        },
+        {
+            "type": "switcher",
+            "text": "$NQT_NOTIFICATIONS",
+            "help": "$NQT_NOTIFICATIONS_HELP",
+            "valueOptions": {
+                "sourceType": "GlobalValue",
+                "sourceForm": "NearestQuestTracker.esp|802"
+            }
+        },
+        {
+            "type": "switcher",
+            "text": "$NQT_AUTO_TRACK",
+            "help": "$NQT_AUTO_TRACK_HELP",
+            "valueOptions": {
+                "sourceType": "GlobalValue",
+                "sourceForm": "NearestQuestTracker.esp|804"
+            },
+            "action": {
+                "type": "CallFunction",
+                "form": "NearestQuestTracker.esp|800",
+                "scriptName": "NQT_MainScript",
+                "function": "OnAutoTrackChanged",
+                "params": []
+            }
+        },
+        {
+            "type": "switcher",
+            "text": "$NQT_INCLUDE_STARTS",
+            "help": "$NQT_INCLUDE_STARTS_HELP",
+            "valueOptions": {
+                "sourceType": "GlobalValue",
+                "sourceForm": "NearestQuestTracker.esp|806"
+            }
+        },
+        {
+            "type": "switcher",
+            "text": "$NQT_INCLUDE_NO_MARKER",
+            "help": "$NQT_INCLUDE_NO_MARKER_HELP",
+            "valueOptions": {
+                "sourceType": "GlobalValue",
+                "sourceForm": "NearestQuestTracker.esp|808"
+            }
+        },
+        {
+            "type": "switcher",
+            "text": "$NQT_NO_SPOILERS",
+            "help": "$NQT_NO_SPOILERS_HELP",
+            "valueOptions": {
+                "sourceType": "GlobalValue",
+                "sourceForm": "NearestQuestTracker.esp|807"
+            },
+            "action": {
+                "type": "CallFunction",
+                "form": "NearestQuestTracker.esp|800",
+                "scriptName": "NQT_MainScript",
+                "function": "OnNoSpoilersChanged",
+                "params": []
+            }
+        },
+        {
+            "type": "spacer"
+        },
+        {
+            "type": "section",
+            "text": "$NQT_SEC_EXCLUDED"
+        },
+        {
+            "type": "text",
+            "text": "$NQT_EXCLUDED_ABOUT"
+        },
+        {
+            "type": "dropdown",
+            "text": "$NQT_RESTORE_PICK",
+            "help": "$NQT_RESTORE_PICK_HELP",
+            "valueOptions": {
+                "sourceType": "PropertyValueInt",
+                "sourceForm": "NearestQuestTracker.esp|800",
+                "scriptName": "NQT_MainScript",
+                "propertyName": "MCMRestoreChoice",
+                "listFromProperty": {
+                    "form": "NearestQuestTracker.esp|800",
+                    "scriptName": "NQT_MainScript",
+                    "propertyName": "ExcludedNames"
+                }
+            },
+            "action": {
+                "type": "CallFunction",
+                "form": "NearestQuestTracker.esp|800",
+                "scriptName": "NQT_MainScript",
+                "function": "RestoreFromMenu",
+                "params": [
+                    "{value}"
+                ]
+            }
+        },
+        {
+            "type": "button",
+            "text": "$NQT_RESTORE_ALL",
+            "help": "$NQT_RESTORE_ALL_HELP",
+            "action": {
+                "type": "CallFunction",
+                "form": "NearestQuestTracker.esp|800",
+                "scriptName": "NQT_MainScript",
+                "function": "RestoreAll",
+                "params": []
+            }
+        }
+    ]
+}

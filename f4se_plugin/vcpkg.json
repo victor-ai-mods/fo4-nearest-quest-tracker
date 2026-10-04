@@ -1,0 +1,12 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "nearest-quest-tracker",
+  "version-semver": "1.0.0",
+  "dependencies": [
+    "nlohmann-json",
+    "rapidcsv",
+    "rsm-mmio",
+    "spdlog"
+  ],
+  "builtin-baseline": "4cfabe769eaceb209ea37267e8c50c43b86a4a7b"
+}
