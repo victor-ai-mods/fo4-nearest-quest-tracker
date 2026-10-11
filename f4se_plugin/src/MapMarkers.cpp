@@ -30,6 +30,13 @@ namespace NQT
 			return extra ? static_cast<const RE::ExtraMapMarker*>(extra)->mapMarkerData : nullptr;
 		}
 
+		MarkerState StateOf(const RE::MapMarkerData& a_data) noexcept
+		{
+			return (a_data.flags & kCanTravelTo) && (a_data.flags & kVisible) ? MarkerState::kVisited :
+			       (a_data.flags & kVisible)                                  ? MarkerState::kSeen :
+			                                                                    MarkerState::kUnknown;
+		}
+
 		std::string_view StateName(MarkerState a_state) noexcept
 		{
 			switch (a_state) {
@@ -225,9 +232,7 @@ namespace NQT
 				marker.root = root;
 				const auto it = locations.find(ref.get());
 				marker.location = it != locations.end() ? it->second : nullptr;
-				marker.state = (data->flags & kCanTravelTo) && (data->flags & kVisible) ? MarkerState::kVisited :
-				               (data->flags & kVisible)                                 ? MarkerState::kSeen :
-				                                                                          MarkerState::kUnknown;
+				marker.state = StateOf(*data);
 				marker.hidden = (data->flags & kHidden) != 0;
 				marker.disabled = ref->IsDisabled();
 				marker.type = MarkerType(*data);
@@ -269,6 +274,12 @@ namespace NQT
 			result.push_back(candidate);
 		}
 		return result;
+	}
+
+	MarkerState GetMapMarkerState(const RE::TESObjectREFR& a_ref)
+	{
+		const auto data = GetMapMarkerData(a_ref);
+		return data ? StateOf(*data) : MarkerState::kUnknown;
 	}
 
 	std::string GetMapMarkerName(const RE::TESObjectREFR& a_ref)

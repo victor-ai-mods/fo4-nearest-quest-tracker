@@ -140,6 +140,12 @@ namespace NQT
 	// a_isExcluded: candidates to skip (excluded quests and locations).
 	[[nodiscard]] const Candidate* FindNearest(std::span<const Candidate> a_candidates, const std::function<bool(const Candidate&)>& a_isExcluded);
 
+	// Sorts candidates in the order FindNearest picks them (excluded ones not skipped).
+	void SortByTrackOrder(std::vector<Candidate>& a_candidates);
+
+	// The player's root world (PlayerRoot); null if not known.
+	[[nodiscard]] const RE::TESWorldSpace* GetPlayerRootWorld();
+
 	// "quest <id> '<name>'" / "start ..." / "location <id> '<name>'" for the log.
 	[[nodiscard]] std::string DescribeCandidate(const Candidate& a_candidate);
 

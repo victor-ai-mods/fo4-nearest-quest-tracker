@@ -117,6 +117,16 @@ namespace NQT
 		return categories;
 	}
 
+	std::vector<RE::TESQuest*> GetCategorizedQuests()
+	{
+		std::vector<RE::TESQuest*> result;
+		result.reserve(questCategories.size());
+		for (const auto& [quest, key] : questCategories) {
+			result.push_back(const_cast<RE::TESQuest*>(quest));
+		}
+		return result;
+	}
+
 	std::string GetQuestCategory(const RE::TESQuest& a_quest)
 	{
 		if (const auto it = questCategories.find(&a_quest); it != questCategories.end()) {

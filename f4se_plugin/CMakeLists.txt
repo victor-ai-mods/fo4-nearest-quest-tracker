@@ -36,6 +36,7 @@ add_library(
 	src/QuestDistance.cpp
 	src/QuestStarts.cpp
 	src/QuestText.cpp
+	src/Window.cpp
 )
 
 target_compile_features("${PROJECT_NAME}" PRIVATE cxx_std_23)

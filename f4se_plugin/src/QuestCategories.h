@@ -22,6 +22,9 @@ namespace NQT
 	// Categories in tree order (a parent before its children), without "other".
 	[[nodiscard]] const std::vector<QuestCategory>& GetQuestCategories();
 
+	// Quests the files give a category, in no particular order.
+	[[nodiscard]] std::vector<RE::TESQuest*> GetCategorizedQuests();
+
 	// The quest's category key; "other.<plugin>" if the files give it none.
 	[[nodiscard]] std::string GetQuestCategory(const RE::TESQuest& a_quest);
 

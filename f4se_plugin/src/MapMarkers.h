@@ -39,6 +39,9 @@ namespace NQT
 	// discovery radius.
 	[[nodiscard]] std::vector<Candidate> CollectLocationCandidates(bool a_all);
 
+	// What the player knows of a map marker now (kUnknown if a_ref is not one).
+	[[nodiscard]] MarkerState GetMapMarkerState(const RE::TESObjectREFR& a_ref);
+
 	// Name the Pip-Boy map shows for a map marker ("" if a_ref is not one).
 	[[nodiscard]] std::string GetMapMarkerName(const RE::TESObjectREFR& a_ref);
 

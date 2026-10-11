@@ -648,14 +648,35 @@ namespace NQT
 		return result;
 	}
 
-	const Candidate* FindNearest(std::span<const Candidate> a_candidates, const std::function<bool(const Candidate&)>& a_isExcluded)
+	namespace
+	{
+		[[nodiscard]] auto TrackOrderKey(const Candidate& a_candidate, const RE::TESWorldSpace* a_playerWorld)
+		{
+			return std::tuple{ WorldRank(a_candidate.world, a_playerWorld), a_candidate.noMarker,
+				a_candidate.noMarker ? 0.0 : a_candidate.distance.SortKey() };
+		}
+	}
+
+	const RE::TESWorldSpace* GetPlayerRootWorld()
 	{
 		const auto player = RE::PlayerCharacter::GetSingleton();
 		const auto playerRoot = player ? PlayerRoot(*player) : std::nullopt;
-		const auto playerWorld = playerRoot ? playerRoot->world : nullptr;
+		return playerRoot ? playerRoot->world : nullptr;
+	}
+
+	void SortByTrackOrder(std::vector<Candidate>& a_candidates)
+	{
+		const auto playerWorld = GetPlayerRootWorld();
+		std::ranges::stable_sort(a_candidates, std::less{}, [&](const Candidate& a_candidate) {
+			return TrackOrderKey(a_candidate, playerWorld);
+		});
+	}
+
+	const Candidate* FindNearest(std::span<const Candidate> a_candidates, const std::function<bool(const Candidate&)>& a_isExcluded)
+	{
+		const auto playerWorld = GetPlayerRootWorld();
 		const auto key = [&](const Candidate& a_candidate) {
-			return std::tuple{ WorldRank(a_candidate.world, playerWorld), a_candidate.noMarker,
-				a_candidate.noMarker ? 0.0 : a_candidate.distance.SortKey() };
+			return TrackOrderKey(a_candidate, playerWorld);
 		};
 
 		logger::debug("  player world {:08X}"sv, playerWorld ? playerWorld->GetFormID() : 0u);

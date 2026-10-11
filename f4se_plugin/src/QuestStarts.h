@@ -31,6 +31,12 @@ namespace NQT
 	// The first start point of a_quest; nullptr if it has none.
 	[[nodiscard]] const QuestStart* FindQuestStart(const RE::TESQuest& a_quest);
 
+	// Quests that have at least one start point, each once.
+	[[nodiscard]] std::vector<RE::TESQuest*> GetQuestsWithStarts();
+
+	// True if a_quest is completed (TESQuest data flags bit 1).
+	[[nodiscard]] bool IsQuestCompleted(const RE::TESQuest& a_quest) noexcept;
+
 	// The nearest start point of a_quest that is available now; nullptr if none is.
 	[[nodiscard]] const QuestStart* FindAvailableStart(const RE::TESQuest& a_quest);
 

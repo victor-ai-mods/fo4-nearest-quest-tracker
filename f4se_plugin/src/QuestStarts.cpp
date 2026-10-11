@@ -304,6 +304,22 @@ namespace NQT
 		return it != starts.end() ? std::to_address(it) : nullptr;
 	}
 
+	std::vector<RE::TESQuest*> GetQuestsWithStarts()
+	{
+		std::vector<RE::TESQuest*> result;
+		for (const auto& start : starts) {
+			if (std::ranges::find(result, start.quest) == result.end()) {
+				result.push_back(start.quest);
+			}
+		}
+		return result;
+	}
+
+	bool IsQuestCompleted(const RE::TESQuest& a_quest) noexcept
+	{
+		return IsCompleted(a_quest);
+	}
+
 	const QuestStart* FindAvailableStart(const RE::TESQuest& a_quest)
 	{
 		const auto player = RE::PlayerCharacter::GetSingleton();

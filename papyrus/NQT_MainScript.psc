@@ -101,6 +101,7 @@ Int Property KindInterior = 5 AutoReadOnly Hidden
 String Property WindowMenu = "NQT_Menu" AutoReadOnly Hidden
 String Property WindowFile = "NearestQuestTracker" AutoReadOnly Hidden
 String Property WindowLogEvent = "NQT_MenuLog" AutoReadOnly Hidden
+String Property WindowActionEvent = "NQT_MenuAction" AutoReadOnly Hidden
 
 Event OnInit()
     Setup()
@@ -210,33 +211,62 @@ Function ExcludeCurrent()
         Return
     EndIf
     Form target
-    String name
     If kind == KindLocation || kind == KindInterior
         target = ShownLocation
-        name = LocationName(ShownLocation, ShownLocationNamed, ShownInterior, russian)
-        ClearLocation()
     ElseIf kind == KindStart
         target = ShownStart
-        name = StartName(ShownStart, russian)
-        ClearStart()
     Else
-        Quest q = LastTracked
-        target = q
+        target = LastTracked
+    EndIf
+    LastKind = KindNone
+    ExcludeTarget(kind, target)
+    Track(false)
+EndFunction
+
+; Puts akTarget on the exclusion list: aiKind KindQuest or KindNoMarker (a Pip-Boy quest: untracked), KindStart (a
+; quest not started: its start marker goes if shown), KindLocation or KindInterior (a map marker or the door into an
+; interior: the location marker goes if it is on it).
+Function ExcludeTarget(Int aiKind, Form akTarget)
+    If !akTarget
+        Return
+    EndIf
+    Bool russian = IsRussian()
+    Int kind = aiKind
+    String name
+    If kind == KindLocation || kind == KindInterior
+        ObjectReference ref = akTarget as ObjectReference
+        Bool named = kind == KindInterior || NQT_AllLocations.GetValue() != 0.0 || ref.IsMapMarkerVisible()
+        If ref == ShownLocation
+            named = ShownLocationNamed
+            ClearLocation()
+            If LastKind == KindLocation || LastKind == KindInterior
+                LastKind = KindNone
+            EndIf
+        EndIf
+        name = LocationName(ref, named, kind == KindInterior, russian)
+    ElseIf kind == KindStart
+        Quest q = akTarget as Quest
+        name = StartName(q, russian)
+        If q == ShownStart
+            ClearStart()
+        EndIf
+    Else
+        kind = KindQuest
+        Quest q = akTarget as Quest
         name = NQT_Native.GetQuestDisplayName(q)
         q.SetActive(false)
     EndIf
-    If target == LastTracked
+    If akTarget == LastTracked
         LastTracked = None
+        LastKind = KindNone
     EndIf
-    LastKind = KindNone
     If ExcludedItems.Length >= MaxExcluded
         RemoveExcludedAt(0)
     EndIf
-    AddExcluded(target, name, kind)
+    AddExcluded(akTarget, name, kind)
     SyncExcluded()
-    NQT_Native.Log("ExcludeCurrent: " + target + " '" + name + "' (kind " + kind + "), " + ExcludedItems.Length + " excluded")
+    NQT_Native.Log("ExcludeTarget: " + akTarget + " '" + name + "' (kind " + kind + "), " + ExcludedItems.Length + " excluded")
     Notify(russian, "Исключено: " + name, "Excluded: " + name)
-    Track(false)
 EndFunction
 
 Function RestoreLast()
@@ -377,8 +407,45 @@ Function ToggleWindow()
             + data.depth)
     EndIf
     RegisterForExternalEvent(WindowLogEvent, "OnWindowLog")
+    RegisterForExternalEvent(WindowActionEvent, "OnWindowAction")
     Bool opened = UI.OpenMenu(WindowMenu)
     NQT_Native.Log("ToggleWindow: OpenMenu " + opened)
+EndFunction
+
+; The window's f4se.SendExternalEvent(WindowActionEvent, action, kind, quest, ref) on a click in a list (FormIDs of
+; the row, see NearestQuestTracker.dll Window.h): "mark" marks the row's target like the track hotkey, "exclude" puts
+; it on the exclusion list like the exclude hotkey (without marking the next one), "restore" takes it back. The window
+; then reads its lists again (root1.Refresh).
+Function OnWindowAction(String asAction, Int aiKind, Int aiQuestID, Int aiRefID)
+    Setup()
+    Cleanup()
+    Quest q = None
+    If aiQuestID != 0
+        q = Game.GetForm(aiQuestID) as Quest
+    EndIf
+    Form target = q
+    If aiKind == KindLocation || aiKind == KindInterior
+        target = Game.GetForm(aiRefID)
+    EndIf
+    NQT_Native.Log("OnWindowAction: " + asAction + " kind " + aiKind + " " + q + " ref " + aiRefID + " -> " + target)
+    If !target
+        ; nothing to act on (a plugin no longer loaded)
+    ElseIf asAction == "mark"
+        Mark(aiKind, q, aiRefID, false)
+    ElseIf asAction == "exclude"
+        ExcludeTarget(aiKind, target)
+    ElseIf asAction == "restore"
+        Int index = ExcludedItems.Find(target)
+        If index >= 0
+            String name = ExcludedItemNames[index]
+            RemoveExcludedAt(index)
+            SyncExcluded()
+            Notify(IsRussian(), "Возвращено: " + name, "Restored: " + name)
+        EndIf
+    EndIf
+    If UI.IsMenuOpen(WindowMenu)
+        UI.Invoke(WindowMenu, "root1.Refresh")
+    EndIf
 EndFunction
 
 ; The window's f4se.SendExternalEvent(WindowLogEvent, text): what reached it (events, keys, clicks).
@@ -462,14 +529,24 @@ Bool Function Track(Bool abAuto)
         Return false
     EndIf
     Int[] found = NQT_Native.FindNearestTarget(NQT_ExcludedList, NQT_ExcludedLocationList, sources, NQT_AllLocations.GetValue() != 0.0)
-    Int kind = found[0]
     Quest q = None
     If found[1] != 0
         q = Game.GetForm(found[1]) as Quest
     EndIf
+    NQT_Native.Log("Track(auto " + abAuto + ", sources " + sources + "): found kind " + found[0] + " " + q + " " + found[2])
+    Return Mark(found[0], q, found[2], abAuto)
+EndFunction
+
+; Marks one target: aiKind KindQuest / KindNoMarker (akQuest is tracked), KindStart (akQuest's start marker goes on
+; the ref aiMarkerID), KindLocation / KindInterior (the location marker goes on the map marker / door aiMarkerID).
+; The rest as Track: NQT_UntrackOthers, LastKind / LastTracked, the notification. Returns true if something is marked.
+Bool Function Mark(Int aiKind, Quest akQuest, Int aiMarkerID, Bool abAuto)
+    Bool russian = IsRussian()
+    Int kind = aiKind
+    Quest q = akQuest
     ObjectReference marker = None
-    If found[2] != 0
-        marker = Game.GetForm(found[2]) as ObjectReference
+    If aiMarkerID != 0
+        marker = Game.GetForm(aiMarkerID) as ObjectReference
     EndIf
 
     Bool alreadyTracked = false
@@ -479,7 +556,7 @@ Bool Function Track(Bool abAuto)
         shown = ShowLocation(marker, kind == KindInterior)
     ElseIf kind == KindStart && q
         alreadyTracked = q == ShownStart && NQT_StartQuest.IsActive()
-        shown = ShowStart(q, found[2])
+        shown = ShowStart(q, aiMarkerID)
     ElseIf (kind == KindQuest || kind == KindNoMarker) && q
         alreadyTracked = q.IsActive()
         q.SetActive(true)
@@ -507,7 +584,7 @@ Bool Function Track(Bool abAuto)
     LastTracked = q
 
     If kind == KindNone
-        NQT_Native.Log("Track(auto " + abAuto + ", sources " + sources + "): nothing found; untracked " + untracked)
+        NQT_Native.Log("Mark(auto " + abAuto + "): nothing to mark; untracked " + untracked)
         If !abAuto
             Notify(russian, "Нет подходящих целей", "No targets found")
         EndIf
@@ -525,8 +602,7 @@ Bool Function Track(Bool abAuto)
     Else
         label = Choose(russian, "Отслеживается: ", "Tracking: ") + NQT_Native.GetQuestDisplayName(q)
     EndIf
-    NQT_Native.Log("Track(auto " + abAuto + ", sources " + sources + "): kind " + kind + " " + q + " " + marker + " '" + label \
-        + "'; untracked " + untracked)
+    NQT_Native.Log("Mark(auto " + abAuto + "): kind " + kind + " " + q + " " + marker + " '" + label + "'; untracked " + untracked)
     If !abAuto || !alreadyTracked
         Notify(russian, label, label)
     EndIf

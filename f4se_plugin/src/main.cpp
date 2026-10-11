@@ -5,6 +5,7 @@
 #include "QuestDistance.h"
 #include "QuestStarts.h"
 #include "QuestText.h"
+#include "Window.h"
 
 namespace
 {
@@ -76,5 +77,6 @@ extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Load(const F4SE::LoadInterface* a_f
 	if (const auto papyrus = F4SE::GetPapyrusInterface()) {
 		papyrus->Register(RegisterPapyrus);
 	}
+	NQT::Window::Register();
 	return true;
 }
