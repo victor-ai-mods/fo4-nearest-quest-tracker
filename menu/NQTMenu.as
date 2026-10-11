@@ -32,6 +32,7 @@ package
 
 		public var BGSCodeObj:Object;
 		private var f4se:Object;
+		private var fields:Array = [];
 		private var closeButton:Sprite;
 		private var closeFrame:Shape;
 		private var closing:Boolean = false;
@@ -49,6 +50,14 @@ package
 		{
 			f4se = obj;
 			Log("onF4SEObjCreated; BGSCodeObj: " + Members(BGSCodeObj));
+			for (var i:int = 0; i < fields.length; i++)
+			{
+				var tf:TextField = fields[i];
+				var f:TextFormat = tf.getTextFormat();
+				Log("field " + i + ": '" + tf.text + "' length " + tf.length + ", font " + f.font + ", size " + f.size
+					+ ", color " + f.color + ", align " + f.align + ", embedFonts " + tf.embedFonts + ", "
+					+ Math.round(tf.width) + "x" + Math.round(tf.height));
+			}
 		}
 
 		// Движок: событие управления меню ("Cancel", "Accept", …), abPressed — нажато / отпущено.
@@ -116,9 +125,7 @@ package
 			panel.graphics.endFill();
 			addChild(panel);
 
-			var title:TextField = MakeField(30, TextFormatAlign.CENTER);
-			title.text = "$NQT_MENU_TITLE";
-			title.width = PANEL_W;
+			var title:TextField = MakeField("$NQT_MENU_TITLE", 30, TextFormatAlign.CENTER, PANEL_W);
 			title.y = 28;
 			panel.addChild(title);
 
@@ -128,9 +135,7 @@ package
 			line.graphics.lineTo(PANEL_W - 40, 80);
 			panel.addChild(line);
 
-			var text:TextField = MakeField(20, TextFormatAlign.CENTER);
-			text.text = "$NQT_MENU_EMPTY";
-			text.width = PANEL_W - 80;
+			var text:TextField = MakeField("$NQT_MENU_EMPTY", 20, TextFormatAlign.CENTER, PANEL_W - 80);
 			text.x = 40;
 			text.y = 110;
 			panel.addChild(text);
@@ -143,9 +148,7 @@ package
 			closeButton.mouseChildren = false;
 			closeFrame = new Shape();
 			closeButton.addChild(closeFrame);
-			var label:TextField = MakeField(22, TextFormatAlign.CENTER);
-			label.text = "$NQT_MENU_CLOSE";
-			label.width = BUTTON_W;
+			var label:TextField = MakeField("$NQT_MENU_CLOSE", 22, TextFormatAlign.CENTER, BUTTON_W);
 			label.y = (BUTTON_H - label.height) / 2;
 			closeButton.addChild(label);
 			DrawButton(false);
@@ -187,9 +190,12 @@ package
 			Close("button");
 		}
 
-		private function MakeField(size:Number, align:String):TextField
+		// Формат ставится и по умолчанию, и явно после текста: ключ "$…" Scaleform заменяет переводом при присвоении,
+		// и одного defaultTextFormat (тест 4: текст чёрный, слева, без шрифта) может не хватить.
+		private function MakeField(s:String, size:Number, align:String, w:Number):TextField
 		{
 			var tf:TextField = new TextField();
+			tf.width = w;
 			tf.embedFonts = true;
 			tf.selectable = false;
 			tf.mouseEnabled = false;
@@ -199,6 +205,9 @@ package
 			var fmt:TextFormat = new TextFormat("$MAIN_Font", size, 0xFFFFFF);
 			fmt.align = align;
 			tf.defaultTextFormat = fmt;
+			tf.text = s;
+			tf.setTextFormat(fmt);
+			fields.push(tf);
 			return tf;
 		}
 
