@@ -18,7 +18,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BUILD = os.path.join(ROOT, 'build')
 OUT = os.path.join(ROOT, 'release')
 NAME = 'NearestQuestTracker'
-SCRIPTS = ['NQT_MainScript', 'NQT_Native']
+SCRIPTS = ['NQT_MainScript', 'NQT_Native', 'NQT_OpenWindowEffect']
 
 
 def files():

@@ -43,6 +43,8 @@ GlobalVariable Property NQT_SkipOwnedLocked Auto Const Mandatory
 {1 = interiors behind a locked door that is a crime to pick are skipped (MCM "Skip locked doors of others").}
 GlobalVariable Property NQT_ShowQuestInWindow Auto Const Mandatory
 {1 = ShowCurrentQuest shows a message window instead of notifications (MCM "Current quest in a window").}
+Potion Property NQT_WindowItem Auto Const Mandatory
+{The item "Nearest Quest Tracker": using it opens the window (with a gamepad: from the favorites).}
 
 ; MCM "Excluded" dropdown (listFromProperty): element 0 is a hint, then the labels of ExcludedItems.
 String[] Property ExcludedNames Auto Hidden
@@ -102,6 +104,10 @@ String Property WindowMenu = "NQT_Menu" AutoReadOnly Hidden
 String Property WindowFile = "NearestQuestTracker" AutoReadOnly Hidden
 String Property WindowLogEvent = "NQT_MenuLog" AutoReadOnly Hidden
 String Property WindowActionEvent = "NQT_MenuAction" AutoReadOnly Hidden
+; Menus the window waits for to close before it opens (it would open under the pause menu, MCM lives there).
+String Property PipboyMenu = "PipboyMenu" AutoReadOnly Hidden
+String Property PauseMenu = "PauseMenu" AutoReadOnly Hidden
+Bool WindowPending = false
 
 Event OnInit()
     Setup()
@@ -153,7 +159,7 @@ EndEvent
 ; Runs each step once per save: from OnInit, and from every entry point for saves made before the step existed
 ; (there the quest already ran OnInit, so nothing is set up until a hotkey, an MCM action or a load calls this).
 ; Version 1: events and auto mode; 2: excluded locations (development builds only); 3: one exclusion list for
-; quests and locations (the lists of versions 1 and 2 move into it).
+; quests and locations (the lists of versions 1 and 2 move into it); 4: the item that opens the window.
 Function Setup()
     If SetupVersion < 1
         RegisterForRemoteEvent(Game.GetPlayer(), "OnPlayerLoadGame")
@@ -188,7 +194,10 @@ Function Setup()
         SyncExcluded()
         NQT_Native.Log("Setup: version " + SetupVersion + " -> 3, " + ExcludedItems.Length + " excluded")
     EndIf
-    SetupVersion = 3
+    If SetupVersion < 4
+        GiveWindowItem(false)
+    EndIf
+    SetupVersion = 4
 EndFunction
 
 ; ---------------------------------------------------------------------------------------------------
@@ -446,6 +455,60 @@ Function OnWindowAction(String asAction, Int aiKind, Int aiQuestID, Int aiRefID)
     If UI.IsMenuOpen(WindowMenu)
         UI.Invoke(WindowMenu, "root1.Refresh")
     EndIf
+EndFunction
+
+; From the item (Pip-Boy or favorites) and the MCM button: opens the window now, or once the Pip-Boy or the pause
+; menu (MCM) closes - the window would be drawn under the pause menu.
+Function OpenWindowWhenFree(String asFrom)
+    Setup()
+    If UI.IsMenuOpen(PipboyMenu) || UI.IsMenuOpen(PauseMenu)
+        WindowPending = true
+        RegisterForMenuOpenCloseEvent(PipboyMenu)
+        RegisterForMenuOpenCloseEvent(PauseMenu)
+        NQT_Native.Log("OpenWindowWhenFree(" + asFrom + "): waiting for the Pip-Boy / pause menu to close")
+        Return
+    EndIf
+    NQT_Native.Log("OpenWindowWhenFree(" + asFrom + ")")
+    If !UI.IsMenuOpen(WindowMenu)
+        ToggleWindow()
+    EndIf
+EndFunction
+
+Event OnMenuOpenCloseEvent(String asMenuName, Bool abOpening)
+    If abOpening || !WindowPending || UI.IsMenuOpen(PipboyMenu) || UI.IsMenuOpen(PauseMenu)
+        Return
+    EndIf
+    WindowPending = false
+    UnregisterForMenuOpenCloseEvent(PipboyMenu)
+    UnregisterForMenuOpenCloseEvent(PauseMenu)
+    NQT_Native.Log("OnMenuOpenCloseEvent: " + asMenuName + " closed, opening the window")
+    If !UI.IsMenuOpen(WindowMenu)
+        ToggleWindow()
+    EndIf
+EndEvent
+
+; MCM button "Open window".
+Function OpenWindowFromMenu()
+    OpenWindowWhenFree("MCM")
+EndFunction
+
+; Puts the item into the player's inventory if it is not there (abNotify: MCM button "Give the item", says so).
+Function GiveWindowItem(Bool abNotify)
+    Actor player = Game.GetPlayer()
+    Bool russian = IsRussian()
+    If player.GetItemCount(NQT_WindowItem) == 0
+        player.AddItem(NQT_WindowItem, 1, !abNotify)
+        NQT_Native.Log("GiveWindowItem: given")
+    ElseIf abNotify
+        Debug.Notification(Choose(russian, "Предмет «Nearest Quest Tracker» уже есть в инвентаре (Помощь)", \
+            "The item \"Nearest Quest Tracker\" is already in the inventory (Aid)"))
+    EndIf
+EndFunction
+
+; MCM button "Give the item".
+Function GiveWindowItemFromMenu()
+    Setup()
+    GiveWindowItem(true)
 EndFunction
 
 ; The window's f4se.SendExternalEvent(WindowLogEvent, text): what reached it (events, keys, clicks).

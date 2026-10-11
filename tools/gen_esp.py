@@ -25,6 +25,10 @@
                                  «Взломать», TESObjectREFR::IsCrimeToActivate) (MCM, по умолчанию 1)
     GLOB  NQT_ShowQuestInWindow — 1 = хоткей «Показать текущий квест» показывает квест в окне, а не уведомлениями
                                  (MCM, по умолчанию 0)
+    MGEF  NQT_OpenWindowEffect — архетип Script, скрипт NQT_OpenWindowEffect: открыть окно мода (этап 3e)
+    ALCH  NQT_WindowItem      — предмет «Nearest Quest Tracker» на вкладке «Помощь»: окно с геймпада через избранное
+                                (на MCM-хоткей кнопку геймпада не назначить); возвращается в инвентарь после
+                                использования. Шаблоны MGEF.DATA / ALCH — как в Explosives Cycler (работает в игре).
 
 Поиск ближайшего квеста и его названия — нативные функции NQT_Native (NearestQuestTracker.dll).
 
@@ -62,7 +66,17 @@ FID_INCLUDE_LOCATIONS = BASE | 0x80D
 FID_INCLUDE_INTERIORS = BASE | 0x80E
 FID_SKIP_OWNED_LOCKED = BASE | 0x80F
 FID_SHOW_QUEST_IN_WINDOW = BASE | 0x810
-NEXT_ID = 0x811
+FID_OPEN_WINDOW_EFFECT = BASE | 0x811
+FID_WINDOW_ITEM = BASE | 0x812
+NEXT_ID = 0x813
+
+# Ванильные FormID (Fallout4.esm), как у предмета Explosives Cycler.
+KYWD_OBJECT_TYPE_STIMPAK = 0x000F4AEB   # вкладка «Помощь»
+KYWD_HC_IGNORE_AS_FOOD = 0x00249F52     # иначе Выживание считает предмет едой
+SCRIPT_EFFECT = 'NQT_OpenWindowEffect'
+ITEM_NAME = 'Nearest Quest Tracker'
+ITEM_DESC = ('Opens the Nearest Quest Tracker window. Put it into your favorites to open the window with a '
+             'gamepad. Reusable - returns to your inventory after every use.')
 
 # Квесты маркеров (старт, локация); номера совпадают с NQT_MainScript (StartObjective, StartAlias,
 # LocationObjective, LocationRefAlias).
@@ -89,7 +103,7 @@ def build():
                       ('NQT_ExcludedLocationList', FID_EXCLUDED_LOCATIONS),
                       ('NQT_IncludeQuests', FID_INCLUDE_QUESTS), ('NQT_IncludeLocations', FID_INCLUDE_LOCATIONS),
                       ('NQT_IncludeInteriors', FID_INCLUDE_INTERIORS), ('NQT_SkipOwnedLocked', FID_SKIP_OWNED_LOCKED),
-                      ('NQT_ShowQuestInWindow', FID_SHOW_QUEST_IN_WINDOW)]:
+                      ('NQT_ShowQuestInWindow', FID_SHOW_QUEST_IN_WINDOW), ('NQT_WindowItem', FID_WINDOW_ITEM)]:
         s.prop(name, PROP_OBJECT, fid)
     quest.add(b'VMAD', vmad([s]))
     quest.add(b'FULL', zstring('Nearest Quest Tracker'))
@@ -117,7 +131,50 @@ def build():
               marker_quest(FID_START_QUEST, 'NQT_StartMarkerQuest', 'Nearest Quest Tracker: new quest', 'New quest', 'StartRef'),
               marker_quest(FID_LOCATION_QUEST, 'NQT_LocationMarkerQuest', 'Nearest Quest Tracker: location', 'Location',
                            'LocationRef')]
-    return [(b'GLOB', globs), (b'QUST', quests), (b'FLST', [excluded, excluded_locations])]
+    # Порядок верхних групп — как в Fallout4.esm: GLOB … MGEF … ALCH … QUST … FLST.
+    return [(b'GLOB', globs), (b'MGEF', [window_effect()]), (b'ALCH', [window_item()]), (b'QUST', quests),
+            (b'FLST', [excluded, excluded_locations])]
+
+
+def mgef_data():
+    """MGEF.DATA 152 байта: Archetype Script (+0x40 = 1), остальное — как в Explosives Cycler / QuickAid."""
+    data = bytearray(152)
+    struct.pack_into('<I', data, 0x40, 1)
+    struct.pack_into('<I', data, 0x50, 1)
+    struct.pack_into('<f', data, 0x70, 1.0)
+    struct.pack_into('<I', data, 0x8C, 1)
+    return bytes(data)
+
+
+def window_effect():
+    r = Record(b'MGEF', FID_OPEN_WINDOW_EFFECT, 'NQT_OpenWindowEffect')
+    s = Script(SCRIPT_EFFECT)
+    s.prop('Main', PROP_OBJECT, FID_QUEST)
+    s.prop('SelfItem', PROP_OBJECT, FID_WINDOW_ITEM)
+    r.add(b'VMAD', vmad([s]))
+    r.add(b'FULL', zstring(ITEM_NAME))
+    r.add(b'DATA', mgef_data())
+    r.add(b'SNDD', b'')
+    r.add(b'DNAM', b'\x00')
+    return r
+
+
+def window_item():
+    r = Record(b'ALCH', FID_WINDOW_ITEM, 'NQT_WindowItem')
+    r.add(b'OBND', struct.pack('<6h', -4, -4, -1, 4, 4, 1))
+    r.add(b'FULL', zstring(ITEM_NAME))
+    r.add(b'KSIZ', struct.pack('<I', 2))
+    r.add(b'KWDA', struct.pack('<II', KYWD_OBJECT_TYPE_STIMPAK, KYWD_HC_IGNORE_AS_FOOD))
+    r.add(b'MODL', zstring('Props\\Holotape_Prop.nif'))
+    r.add(b'MODT', struct.pack('<I', 4) + bytes(16))
+    r.add(b'DESC', zstring(ITEM_DESC))
+    r.add(b'DATA', struct.pack('<f', 0.0))          # вес
+    # ENIT: цена, флаги (NoAutoCalc | Medicine -> вкладка «Помощь»), зависимость, шанс, звук (0 = без звука).
+    r.add(b'ENIT', struct.pack('<iIIfI', 0, 0x00010001, 0, 0.0, 0))
+    r.add(b'DNAM', struct.pack('<I', 0))
+    r.add(b'EFID', struct.pack('<I', FID_OPEN_WINDOW_EFFECT))
+    r.add(b'EFIT', struct.pack('<fII', 0.0, 0, 0))
+    return r
 
 
 def marker_quest(fid, edid, full, objective_text, alias_name):
@@ -146,8 +203,8 @@ def check(path):
     from esm import Plugin
     plugin = Plugin(path)
     assert plugin.masters == ['Fallout4.esm'], 'мастера: %r' % (plugin.masters,)
-    counts = {sig.decode(): sum(1 for _ in plugin.records(sig)) for sig in (b'GLOB', b'QUST', b'FLST')}
-    assert counts == {'GLOB': 12, 'QUST': 3, 'FLST': 2}, counts
+    counts = {sig.decode(): sum(1 for _ in plugin.records(sig)) for sig in (b'GLOB', b'MGEF', b'ALCH', b'QUST', b'FLST')}
+    assert counts == {'GLOB': 12, 'MGEF': 1, 'ALCH': 1, 'QUST': 3, 'FLST': 2}, counts
     print('  проверка: мастер один, записи %s' % counts)
 
 

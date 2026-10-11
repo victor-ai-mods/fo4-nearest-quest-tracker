@@ -123,6 +123,13 @@ STRINGS = {
         'RESTORE_PICK': 'Restore',
         'RESTORE_PICK_HELP': 'Pick an excluded target to take it back into the search. Completed quests, discovered '
                              'locations and visited interiors leave the list by themselves.',
+        'SEC_WINDOW': 'Window',
+        'OPEN_WINDOW': 'Open window',
+        'OPEN_WINDOW_HELP': 'Opens the window once you leave the menu. With a gamepad: put the item "Nearest Quest '
+                            'Tracker" (Aid) into your favorites.',
+        'GIVE_ITEM': 'Give the item',
+        'GIVE_ITEM_HELP': 'Puts the item "Nearest Quest Tracker" into the inventory (Aid) if it is not there. Using it '
+                          'opens the window; in the favorites it opens with one gamepad button.',
         'RESTORE_ALL': 'Restore all',
         'RESTORE_ALL_HELP': 'Empties the list of excluded targets.',
         'RESTORE_QUESTS': 'Restore active quests',
@@ -194,6 +201,13 @@ STRINGS = {
         'RESTORE_PICK': 'Вернуть',
         'RESTORE_PICK_HELP': 'Выберите исключённое, чтобы вернуть в поиск. Выполненные квесты, открытые локации и '
                              'посещённые интерьеры уходят из списка сами.',
+        'SEC_WINDOW': 'Окно',
+        'OPEN_WINDOW': 'Открыть окно',
+        'OPEN_WINDOW_HELP': 'Окно откроется, когда вы выйдете из меню. С геймпада удобнее предмет «Nearest Quest '
+                            'Tracker» (Помощь) в избранном.',
+        'GIVE_ITEM': 'Выдать предмет',
+        'GIVE_ITEM_HELP': 'Кладёт в инвентарь (Помощь) предмет «Nearest Quest Tracker», если его нет. Использование '
+                          'открывает окно; в избранном — одной кнопкой геймпада.',
         'RESTORE_ALL': 'Вернуть всё',
         'RESTORE_ALL_HELP': 'Очищает список исключённого.',
         'RESTORE_QUESTS': 'Вернуть активные квесты',
@@ -231,6 +245,10 @@ def button(key, function, params=()):
 def config():
     content = [
         {'type': 'text', 'text': t('ABOUT')},
+        {'type': 'spacer'},
+        {'type': 'section', 'text': t('SEC_WINDOW')},
+        button('OPEN_WINDOW', 'OpenWindowFromMenu'),
+        button('GIVE_ITEM', 'GiveWindowItemFromMenu'),
         {'type': 'spacer'},
         {'type': 'section', 'text': t('SEC_KEYS')},
     ]

@@ -21,7 +21,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GAME = os.environ.get('FO4_PATH', r'D:\Games\Fallout 4')
 DATA = os.path.join(GAME, 'Data')
 PLUGIN = 'NearestQuestTracker.esp'
-SCRIPTS = ['NQT_MainScript.pex', 'NQT_Native.pex']
+SCRIPTS = ['NQT_MainScript.pex', 'NQT_Native.pex', 'NQT_OpenWindowEffect.pex']
 DLL = 'NearestQuestTracker.dll'
 MOD_FILES = os.path.join(ROOT, 'mod')           # пути внутри — как от Data
 

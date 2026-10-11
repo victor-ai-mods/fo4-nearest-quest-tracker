@@ -15,6 +15,37 @@
         },
         {
             "type": "section",
+            "text": "$NQT_SEC_WINDOW"
+        },
+        {
+            "type": "button",
+            "text": "$NQT_OPEN_WINDOW",
+            "help": "$NQT_OPEN_WINDOW_HELP",
+            "action": {
+                "type": "CallFunction",
+                "form": "NearestQuestTracker.esp|800",
+                "scriptName": "NQT_MainScript",
+                "function": "OpenWindowFromMenu",
+                "params": []
+            }
+        },
+        {
+            "type": "button",
+            "text": "$NQT_GIVE_ITEM",
+            "help": "$NQT_GIVE_ITEM_HELP",
+            "action": {
+                "type": "CallFunction",
+                "form": "NearestQuestTracker.esp|800",
+                "scriptName": "NQT_MainScript",
+                "function": "GiveWindowItemFromMenu",
+                "params": []
+            }
+        },
+        {
+            "type": "spacer"
+        },
+        {
+            "type": "section",
             "text": "$NQT_SEC_KEYS"
         },
         {
