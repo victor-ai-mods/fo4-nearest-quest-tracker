@@ -126,6 +126,9 @@ def build_base_swf():
     body = rect(0, WIDTH * 20, 0, HEIGHT * 20) + struct.pack('<HH', 30 << 8, 1)   # 30 fps, 1 кадр
     body += tag(69, struct.pack('<I', 0x08))            # FileAttributes: ActionScript 3
     body += tag(9, b'\x00\x00\x00')                     # SetBackgroundColor
+    # ImportAssets2 "fonts_en.swf" без символов — как у ванильных меню (MessageBoxMenu.swf): подключает игровую
+    # библиотеку шрифтов ($MAIN_Font…). Без него текст окна — чёрные прямоугольники (в HUDMenu шрифты уже есть).
+    body += tag(71, b'fonts_en.swf\x00' + struct.pack('<BBH', 1, 0, 0))
     body += tag(82, struct.pack('<I', 1) + b'\x00' + build_abc())   # DoABC
     body += tag(76, struct.pack('<HH', 1, 0) + CLASS.encode() + b'\x00')   # SymbolClass: класс документа
     body += tag(1, b'')                                 # ShowFrame
