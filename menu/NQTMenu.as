@@ -108,6 +108,21 @@ package
 		private var closeFrame:Shape;
 		private var closing:Boolean = false;
 		private var waitFrames:int = 0;
+		// Клавиатура и геймпад (этап 3e; тест: геймпад приходит как клавиши — крестовина и стик = стрелки 37..40, A = Enter
+		// 13, B = Esc 27 (и ProcessUserEvent "Cancel"), X = ProcessUserEvent "ReadyWeapon", Y = "Jump"; SetPlatform 1).
+		// Фокус — верхняя строка (вкладки и фильтры), дерево или список; выделение видно после клавиши навигации.
+		private static const FOCUS_TOP:int = 0;
+		private static const FOCUS_TREE:int = 1;
+		private static const FOCUS_LIST:int = 2;
+		private var focus:int = FOCUS_LIST;
+		private var navActive:Boolean = false;
+		private var topIndex:int = 0;       // 0..1 вкладки, 2..4 фильтры
+		private var treeIndex:int = 0;
+		private var listIndex:int = 0;
+		private var platform:uint = 0;      // SetPlatform: 0 клавиатура и мышь, иначе геймпад
+		private var hints:TextField;
+		private var mouseX0:Number = -1;
+		private var mouseY0:Number = -1;
 		// Колонки списка для текущей вкладки: x названия, мира, расстояния, состояния, кнопки; ширина списка.
 		private var listW:Number = 0;
 		private var cols:Array = [];
@@ -185,10 +200,24 @@ package
 		// Движок: событие управления меню ("Cancel", "Accept", …), abPressed — нажато / отпущено.
 		public function ProcessUserEvent(asEvent:String, abPressed:Boolean):Boolean
 		{
-			Log("input: ProcessUserEvent " + asEvent + " " + abPressed);    // 3e: какие события шлёт геймпад
-			if (!abPressed && asEvent == "Cancel")
+			if (abPressed)
+			{
+				return false;
+			}
+			if (asEvent == "Cancel")
 			{
 				Close("Cancel");
+				return true;
+			}
+			if (asEvent == "ReadyWeapon")   // X / R
+			{
+				ExcludeSelected();
+				return true;
+			}
+			if (asEvent == "Jump")          // Y / Пробел
+			{
+				navActive = true;
+				SelectTab(1 - tab);
 				return true;
 			}
 			return false;
@@ -198,12 +227,18 @@ package
 		public function SetPlatform(auiPlatform:uint, abPS3Switch:Boolean):void
 		{
 			Log("input: SetPlatform " + auiPlatform + " " + abPS3Switch);
+			platform = auiPlatform;
+			if (platform != 0)
+			{
+				navActive = true;   // курсора мыши с геймпадом нет — виден выбор
+			}
+			ShowAll();
 		}
 
 		private function OnAddedToStage(e:Event):void
 		{
-			stage.addEventListener(KeyboardEvent.KEY_UP, OnKeyUp);
 			stage.addEventListener(KeyboardEvent.KEY_DOWN, OnKeyDown);
+			stage.addEventListener(MouseEvent.MOUSE_MOVE, OnMouseMove);
 			stage.addEventListener(MouseEvent.MOUSE_WHEEL, OnWheel);
 			addEventListener(Event.ENTER_FRAME, OnFrame);
 		}
@@ -218,33 +253,216 @@ package
 			}
 		}
 
-		private function OnKeyUp(e:KeyboardEvent):void
-		{
-			Log("input: key up " + e.keyCode + " char " + e.charCode + " location " + e.keyLocation);
-		}
-
+		// Стрелки (и крестовина / стик геймпада), PageUp / PageDown, Enter (A), Esc (B). Код 229 движок шлёт каждый кадр — пропускается.
 		private function OnKeyDown(e:KeyboardEvent):void
 		{
-			Log("input: key down " + e.keyCode + " char " + e.charCode + " location " + e.keyLocation);
-			if (e.keyCode == 27)    // Esc
+			switch (e.keyCode)
 			{
-				Close("Esc");
+				case 27:
+					Close("Esc");
+					break;
+				case 37:
+					Navigate(-1, 0);
+					break;
+				case 38:
+					Navigate(0, -1);
+					break;
+				case 39:
+					Navigate(1, 0);
+					break;
+				case 40:
+					Navigate(0, 1);
+					break;
+				case 33:
+					Navigate(0, -ROWS);
+					break;
+				case 34:
+					Navigate(0, ROWS);
+					break;
+				case 13:
+					Activate();
+					break;
 			}
-			else if (e.keyCode == 38)   // вверх
+		}
+
+		// Мышь сдвинулась — выделение клавиатуры прячется (наведение мышью подсвечивает само).
+		private function OnMouseMove(e:MouseEvent):void
+		{
+			var moved:Boolean = mouseX0 >= 0 && (Math.abs(e.stageX - mouseX0) > 3 || Math.abs(e.stageY - mouseY0) > 3);
+			mouseX0 = e.stageX;
+			mouseY0 = e.stageY;
+			if (moved && navActive && platform == 0)
 			{
-				ScrollBy(-1);
+				navActive = false;
+				ShowAll();
 			}
-			else if (e.keyCode == 40)   // вниз
+		}
+
+		private function TopButtons():Array
+		{
+			return tabButtons.concat(filterButtons);
+		}
+
+		// Перемещение выбора: dx — влево / вправо (дерево <-> список, кнопки верхней строки), dy — по строкам.
+		private function Navigate(dx:int, dy:int):void
+		{
+			var wasActive:Boolean = navActive;
+			var before:String = focus + "/" + topIndex + "/" + treeIndex + "/" + listIndex;
+			navActive = true;
+			if (!wasActive)
 			{
-				ScrollBy(1);
+				ShowAll();      // первое нажатие только показывает выбор
+				return;
 			}
-			else if (e.keyCode == 33)   // PageUp
+			var n:int;
+			if (focus == FOCUS_TOP)
 			{
-				ScrollBy(-ROWS);
+				if (dx != 0)
+				{
+					topIndex = Math.max(0, Math.min(TopButtons().length - 1, topIndex + dx));
+				}
+				else if (dy > 0)
+				{
+					focus = shown.length > 0 ? FOCUS_LIST : (tab == 0 ? FOCUS_TREE : FOCUS_TOP);
+				}
 			}
-			else if (e.keyCode == 34)   // PageDown
+			else if (focus == FOCUS_TREE)
 			{
-				ScrollBy(ROWS);
+				if (dx > 0 && shown.length > 0)
+				{
+					focus = FOCUS_LIST;
+				}
+				else if (dy != 0)
+				{
+					n = treeIndex + dy;
+					if (n < 0 && treeIndex == 0)
+					{
+						focus = FOCUS_TOP;
+						topIndex = tab;
+					}
+					else
+					{
+						treeIndex = Math.max(0, Math.min(treeLines.length - 1, n));
+					}
+				}
+			}
+			else
+			{
+				if (dx < 0 && tab == 0)
+				{
+					focus = FOCUS_TREE;
+				}
+				else if (dy != 0)
+				{
+					n = listIndex + dy;
+					if (n < 0 && listIndex == 0)
+					{
+						focus = FOCUS_TOP;
+						topIndex = tab;
+					}
+					else
+					{
+						listIndex = Math.max(0, Math.min(shown.length - 1, n));
+					}
+				}
+			}
+			if (before != focus + "/" + topIndex + "/" + treeIndex + "/" + listIndex)
+			{
+				PlaySound("UIMenuFocus");
+			}
+			EnsureVisible();
+			ShowAll();
+		}
+
+		private function EnsureVisible():void
+		{
+			if (listIndex < scroll)
+			{
+				scroll = listIndex;
+			}
+			else if (listIndex >= scroll + ROWS)
+			{
+				scroll = listIndex - ROWS + 1;
+			}
+			if (treeIndex < treeScroll)
+			{
+				treeScroll = treeIndex;
+			}
+			else if (treeIndex >= treeScroll + ROWS)
+			{
+				treeScroll = treeIndex - ROWS + 1;
+			}
+		}
+
+		// Enter / A: нажать выбранное — кнопку верхней строки, категорию дерева, строку списка (отметить).
+		private function Activate():void
+		{
+			if (!navActive)
+			{
+				navActive = true;
+				ShowAll();
+				return;
+			}
+			if (focus == FOCUS_TOP)
+			{
+				if (topIndex < tabButtons.length)
+				{
+					SelectTab(topIndex);
+				}
+				else
+				{
+					CycleFilter(topIndex - tabButtons.length);
+				}
+			}
+			else if (focus == FOCUS_TREE)
+			{
+				if (treeIndex < treeLines.length)
+				{
+					ClickNode(treeLines[treeIndex]);
+				}
+			}
+			else if (listIndex < shown.length && shown[listIndex].kind != KIND_NONE)
+			{
+				SendAction("mark", shown[listIndex]);
+			}
+		}
+
+		// X / R: исключить или вернуть выбранную строку списка.
+		private function ExcludeSelected():void
+		{
+			if (focus == FOCUS_LIST && listIndex < shown.length && shown[listIndex].kind != KIND_NONE)
+			{
+				SendAction(shown[listIndex].excluded ? "restore" : "exclude", shown[listIndex]);
+			}
+		}
+
+		private function IsSelectedRow(row:Object):Boolean
+		{
+			return navActive && focus == FOCUS_LIST && row.data != null && row.data == shown[listIndex];
+		}
+
+		private function IsSelectedTreeRow(row:Object):Boolean
+		{
+			return navActive && focus == FOCUS_TREE && row.node != null && row.node == treeLines[treeIndex];
+		}
+
+		private function IsSelectedTop(button:Object):Boolean
+		{
+			return navActive && focus == FOCUS_TOP && TopButtons().indexOf(button) == topIndex;
+		}
+
+		// Подсказки управления под списком: для клавиатуры или геймпада (SetPlatform).
+		private function ShowHints():void
+		{
+			if (platform != 0)
+			{
+				SetText(hints, T("Стик — выбор    A — отметить / нажать    X — исключить    Y — вкладка    B — закрыть",
+					"Stick - select    A - mark / press    X - exclude    Y - tab    B - close"));
+			}
+			else
+			{
+				SetText(hints, T("Стрелки — выбор    Enter — отметить / нажать    R — исключить    Пробел — вкладка    Esc — закрыть",
+					"Arrows - select    Enter - mark / press    R - exclude    Space - tab    Esc - close"));
 			}
 		}
 
@@ -431,19 +649,25 @@ package
 		private function OnTreeClick(e:MouseEvent):void
 		{
 			var row:Object = TreeRowOf(e.currentTarget);
-			if (!row || !row.node)
+			if (row && row.node)
 			{
-				return;
+				ClickNode(row.node);
 			}
-			var node:Object = row.node;
+		}
+
+		private function ClickNode(node:Object):void
+		{
 			if (node != root)
 			{
 				node.expanded = node.key == selectedKey ? !node.expanded : true;
 			}
 			selectedKey = node.key;
 			scroll = 0;
+			listIndex = 0;
 			PlaySound("UIMenuFocus");
 			BuildTreeLines();
+			treeIndex = Math.max(0, treeLines.indexOf(node));
+			EnsureVisible();
 			ShowAll();
 		}
 
@@ -486,6 +710,11 @@ package
 		{
 			var selected:Boolean = row.node && row.node.key == selectedKey;
 			row.back.graphics.clear();
+			if (IsSelectedTreeRow(row))
+			{
+				row.back.graphics.lineStyle(2, 0xFFFFFF, 1);
+				abHover = true;
+			}
 			row.back.graphics.beginFill(0xFFFFFF, abHover ? 0.18 : (selected ? 0.25 : 0.0));
 			row.back.graphics.drawRect(0, 0, TREE_W, ROW_H - 2);
 			row.back.graphics.endFill();
@@ -568,6 +797,21 @@ package
 
 		private function Filter():void
 		{
+			FilterRows();
+			listIndex = Math.max(0, Math.min(listIndex, shown.length - 1));
+			treeIndex = Math.max(0, Math.min(treeIndex, treeLines.length - 1));
+			if (focus == FOCUS_LIST && shown.length == 0)
+			{
+				focus = tab == 0 ? FOCUS_TREE : FOCUS_TOP;
+			}
+			if (focus == FOCUS_TREE && tab != 0)
+			{
+				focus = FOCUS_LIST;
+			}
+		}
+
+		private function FilterRows():void
+		{
 			shown = [];
 			var world:String = worldFilter[tab] >= 0 ? worlds[tab][worldFilter[tab]] : null;
 			var i:int;
@@ -599,6 +843,15 @@ package
 		private function OnFilterClick(e:MouseEvent):void
 		{
 			var i:int = filterButtons.indexOf(ButtonOf(filterButtons, e.currentTarget));
+			if (i >= 0)
+			{
+				CycleFilter(i);
+				DrawFrame(filterButtons[i].back, filterButtons[i].w, filterButtons[i].h, true);
+			}
+		}
+
+		private function CycleFilter(i:int):void
+		{
 			if (i == 0)
 			{
 				if (tab == 0)
@@ -626,9 +879,9 @@ package
 				worldFilter[tab] = worldFilter[tab] + 1 >= worlds[tab].length ? -1 : worldFilter[tab] + 1;
 			}
 			scroll = 0;
+			listIndex = 0;
 			PlaySound("UIMenuFocus");
 			ShowAll();
-			DrawFrame(filterButtons[i].back, filterButtons[i].w, filterButtons[i].h, true);
 		}
 
 		// ---------------------------------------------------------------------------------------------------
@@ -654,14 +907,15 @@ package
 			SetCell(filterButtons[2].text, WorldFilterName());
 			for (var f:int = 0; f < filterButtons.length; f++)
 			{
-				DrawFrame(filterButtons[f].back, filterButtons[f].w, filterButtons[f].h, false);
+				DrawFrame(filterButtons[f].back, filterButtons[f].w, filterButtons[f].h, IsSelectedTop(filterButtons[f]));
 			}
 			SetText(tabButtons[0].text, T("Квесты", "Quests") + " (" + NotCompletedCount() + ")");
 			SetText(tabButtons[1].text, T("Локации", "Locations") + " (" + locationsSeen + "/" + locations.length + ")");
 			for (var t:int = 0; t < tabButtons.length; t++)
 			{
-				DrawTab(tabButtons[t], false);
+				DrawTab(tabButtons[t], IsSelectedTop(tabButtons[t]));
 			}
+			ShowHints();
 			ShowList();
 		}
 
@@ -898,11 +1152,24 @@ package
 
 		private function OnTabClick(e:MouseEvent):void
 		{
-			var i:int = tabButtons.indexOf(ButtonOf(tabButtons, e.currentTarget));
+			SelectTab(tabButtons.indexOf(ButtonOf(tabButtons, e.currentTarget)));
+		}
+
+		private function SelectTab(i:int):void
+		{
 			if (i >= 0 && i != tab)
 			{
 				tab = i;
 				scroll = 0;
+				listIndex = 0;
+				if (focus == FOCUS_TREE)
+				{
+					focus = FOCUS_LIST;
+				}
+				if (focus == FOCUS_TOP)
+				{
+					topIndex = tab;
+				}
 				PlaySound("UIMenuFocus");
 				ShowAll();
 			}
@@ -998,6 +1265,11 @@ package
 			status = MakeField(16, TextFormatAlign.LEFT, (PANEL_W - 200) / 2 - MARGIN - 20, false);
 			status.x = MARGIN;
 			status.y = scrollInfo.y;
+
+			hints = MakeField(14, TextFormatAlign.CENTER, PANEL_W, false);
+			hints.y = LIST_Y + ROWS * ROW_H - 2;
+			hints.alpha = 0.6;
+			panel.addChild(hints);
 			status.alpha = 0.7;
 			panel.addChild(status);
 
@@ -1108,6 +1380,11 @@ package
 		private function DrawRow(row:Object, abHover:Boolean):void
 		{
 			row.back.graphics.clear();
+			if (IsSelectedRow(row))
+			{
+				row.back.graphics.lineStyle(2, 0xFFFFFF, 1);
+				abHover = true;
+			}
 			row.back.graphics.beginFill(0xFFFFFF, abHover ? 0.18 : (row.data && row.data.tracked ? 0.1 : 0.0));
 			row.back.graphics.drawRect(0, 0, listW, ROW_H - 2);
 			row.back.graphics.endFill();
