@@ -633,7 +633,8 @@ package
 			{
 				listBox.x = MARGIN + TREE_W + 20;
 				listW = PANEL_W - MARGIN - listBox.x;
-				cols = [6, listW - ACTION_W - 345, listW - ACTION_W - 225, listW - ACTION_W - 135, listW - ACTION_W];
+				// Мир 135 (тест 3c: «Commonwealth» в 110 не влезал), расстояние 70, состояние 125.
+				cols = [6, listW - ACTION_W - 365, listW - ACTION_W - 220, listW - ACTION_W - 135, listW - ACTION_W];
 			}
 			else
 			{
