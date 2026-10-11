@@ -526,6 +526,16 @@ displayed + `ParseString`, что у названия; повторы текст
   переводит ли Scaleform `$`-ключи из `Translations`); закрытие — `ProcessUserEvent("Cancel")`, Esc (`KEY_DOWN` 27), кнопка
   «Закрыть» → `BGSCodeObj.CloseMenu("NQT_Menu")`. Всё, что дошло до окна, пишется в лог строками `script: window: …`
   (`f4se.SendExternalEvent("NQT_MenuLog")` → `NQT_MainScript.OnWindowLog`).
+- **Тест 1 (2026-10-11, игрок в силовой броне):** окна не видно — только чёрный квадрат с куском рамки под курсором и
+  мерцающая чёрная полоса сверху. По логу всё остальное работает: `RegisterCustomMenu True`, `OpenMenu True`,
+  `onF4SEObjCreated` (функций в `BGSCodeObj` перебором `for…in` не видно), движок шлёт `ProcessUserEvent` («Unmapped»,
+  «Click», «Sprint», «Melee» — обычные действия, а не «Cancel»), `KEY_DOWN` приходит (Esc 27 → `close (Esc)`, окно
+  закрылось). Причина (вероятно): глубина F4SE по умолчанию **6 = kStandard** — та же, что у `PowerArmorRenderer`
+  (HUD брони) и Pip-Boy. Ванильные меню (дизассемблер конструкторов, `[menu+0x58] |= флаги`, `[menu+0x64] = глубина`):
+  MessageBoxMenu `0x8018499` (глубину не пишет), TerminalMenu `0x8008409`/9, LevelUpMenu `0x4010481`/9, BookMenu
+  `0x8608129`/9, SleepWaitMenu `0x8418989`/10, CreditsMenu `0x28009`/15, ExamineConfirmMenu `0x8419`/17, PauseMenu
+  `0x400418`/11, PipboyMenu `0xA0A101|0x10000`/8. Флаги F4SE по умолчанию = MessageBoxMenu + курсор 0x4 — оставлены;
+  **глубина → 9** (kTerminal). Развёрнуто, ретест ждёт (в броне и без).
 - Что смотреть в логе после теста: `ToggleWindow: RegisterCustomMenu True`, `window: onF4SEObjCreated; BGSCodeObj: …`,
   `window: ProcessUserEvent …` (какие события шлёт движок), `window: key down …`, `window: close (…)`.
 
