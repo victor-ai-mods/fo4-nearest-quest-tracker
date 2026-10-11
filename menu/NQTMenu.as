@@ -34,16 +34,16 @@ package
 		private static const PANEL_W:Number = 1120;
 		private static const PANEL_H:Number = 640;
 		private static const BUTTON_H:Number = 40;
-		private static const ROWS:int = 14;
+		private static const ROWS:int = 13;
 		private static const ROW_H:Number = 32;
 		private static const LIST_X:Number = 30;
 		private static const LIST_Y:Number = 150;
 		private static const LIST_W:Number = PANEL_W - 60;
 		// Колонки строки: название, мир, расстояние, состояние, кнопка действия.
 		private static const COL_NAME:Number = 10;
-		private static const COL_WORLD:Number = 560;
-		private static const COL_DIST:Number = 740;
-		private static const COL_STATE:Number = 860;
+		private static const COL_WORLD:Number = 520;
+		private static const COL_DIST:Number = 680;
+		private static const COL_STATE:Number = 790;
 		private static const COL_ACTION:Number = LIST_W - 110;
 		// Игровые единицы -> метры (1 единица = 1,428 см).
 		private static const METERS_PER_UNIT:Number = 0.01428;
@@ -251,7 +251,7 @@ package
 				{
 					continue;
 				}
-				SetText(row.name, (data.tracked ? "► " : "") + RowName(data));
+				SetText(row.name, (data.tracked ? "» " : "") + RowName(data));
 				SetText(row.world, data.world);
 				SetText(row.dist, DistanceText(data.dist));
 				SetText(row.state, RowState(data));
@@ -504,13 +504,14 @@ package
 				panel.addChild(MakeRow(i));
 			}
 
+			// Строка под списком: слева состояние, по центру «Закрыть», справа счётчик.
 			scrollInfo = MakeField(16, TextFormatAlign.RIGHT, 300, false);
 			scrollInfo.x = LIST_X + LIST_W - 300;
-			scrollInfo.y = LIST_Y + ROWS * ROW_H + 6;
+			scrollInfo.y = PANEL_H - BUTTON_H - 16 + 8;
 			scrollInfo.alpha = 0.7;
 			panel.addChild(scrollInfo);
 
-			status = MakeField(16, TextFormatAlign.LEFT, LIST_W - 320, false);
+			status = MakeField(16, TextFormatAlign.LEFT, (PANEL_W - 200) / 2 - LIST_X - 20, false);
 			status.x = LIST_X;
 			status.y = scrollInfo.y;
 			status.alpha = 0.7;
