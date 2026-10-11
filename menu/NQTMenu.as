@@ -15,7 +15,8 @@ package
 
 	// Nearest Quest Tracker: своё окно. Вкладка «Квесты» (этап 3c): слева дерево категорий (QuestCategories.json) со
 	// счётчиками «выполнено/всего», справа квесты выбранной категории; фильтры — состояние, маркер, мир. Вкладка
-	// «Локации» (этап 3b, фильтры — 3d): неоткрытые локации и интерьеры.
+	// «Локации» (этап 3d): неоткрытые локации карты и интерьеры, где игрок не был; фильтры — замеченные / все, локации /
+	// интерьеры, мир. У каждой вкладки свои значения фильтров (те же три кнопки).
 	// Меню регистрирует NQT_MainScript через F4SE UI.RegisterCustomMenu(MENU_NAME, "NearestQuestTracker", "root1", …):
 	// этот класс — корень SWF (root1) и объект меню. Движок кладёт в BGSCodeObj функции F4SE CustomMenu
 	// (PlaySound, OpenMenu, CloseMenu) и зовёт ProcessUserEvent с событиями управления меню.
@@ -70,8 +71,8 @@ package
 		private var russian:Boolean = true;
 
 		private var quests:Array = [];
-		private var locations:Array = [];   // только замеченные (seen): «все» — фильтр этапа 3d
-		private var locationsAll:int = 0;
+		private var locations:Array = [];
+		private var locationsSeen:int = 0;  // замеченные (seen): хоткей выбирает их без MCM «Все локации»
 		private var shown:Array = [];       // строки текущей вкладки после фильтров
 		private var tab:int = 0;            // 0 квесты, 1 локации
 		private var scroll:int = 0;
@@ -85,8 +86,12 @@ package
 		// Фильтры вкладки «Квесты».
 		private var stateFilter:int = 0;
 		private var markerOnly:Boolean = false;
-		private var worlds:Array = [];      // имена миров из строк, в порядке ранга
-		private var worldFilter:int = -1;   // -1 все миры, иначе индекс в worlds
+		// Фильтры вкладки «Локации».
+		private var seenOnly:Boolean = true;
+		private var placeFilter:int = 0;    // 0 локации и интерьеры, 1 только локации, 2 только интерьеры
+		// Фильтр мира, по вкладкам: имена миров из строк (в порядке ранга) и выбранный (-1 все миры).
+		private var worlds:Array = [[], []];
+		private var worldFilter:Array = [-1, -1];
 
 		private var panel:Sprite;
 		private var listBox:Sprite;
@@ -151,22 +156,22 @@ package
 			{
 				quests = plugin.GetQuests();
 				var t1:int = getTimer();
-				var all:Array = plugin.GetLocations();
+				locations = plugin.GetLocations();
 				var t2:int = getTimer();
-				locationsAll = all.length;
-				locations = [];
-				for (var i:int = 0; i < all.length; i++)
+				locationsSeen = 0;
+				for (var i:int = 0; i < locations.length; i++)
 				{
-					if (all[i].seen)
+					if (locations[i].seen)
 					{
-						locations.push(all[i]);
+						locationsSeen++;
 					}
 				}
 				CountTree();
-				CollectWorlds();
-				Log("Refresh: " + quests.length + " quests (" + (t1 - t0) + " ms), " + locationsAll + " locations, "
-					+ locations.length + " seen (" + (t2 - t1) + " ms); " + treeLines.length + " tree lines, worlds: "
-					+ worlds.join(", "));
+				CollectWorlds(0, quests);
+				CollectWorlds(1, locations);
+				Log("Refresh: " + quests.length + " quests (" + (t1 - t0) + " ms), " + locations.length + " locations, "
+					+ locationsSeen + " seen (" + (t2 - t1) + " ms); " + treeLines.length + " tree lines, worlds: "
+					+ worlds[0].join(", ") + " / " + worlds[1].join(", "));
 				SetStatus("");
 			}
 			catch (err:Error)
@@ -475,25 +480,33 @@ package
 		// ---------------------------------------------------------------------------------------------------
 		// Фильтры
 
-		private function CollectWorlds():void
+		// Миры строк вкладки aiTab по рангу (мир игрока первым); выбранный мир остаётся выбранным, если он ещё есть.
+		private function CollectWorlds(aiTab:int, list:Array):void
 		{
-			var current:String = worldFilter >= 0 && worldFilter < worlds.length ? worlds[worldFilter] : null;
+			var old:Array = worlds[aiTab];
+			var current:String = worldFilter[aiTab] >= 0 && worldFilter[aiTab] < old.length ? old[worldFilter[aiTab]] : null;
 			var ranks:Object = {};
-			worlds = [];
-			for (var i:int = 0; i < quests.length; i++)
+			var names:Array = [];
+			for (var i:int = 0; i < list.length; i++)
 			{
-				var w:String = quests[i].world;
+				var w:String = list[i].world;
 				if (w != "" && ranks[w] === undefined)
 				{
-					ranks[w] = quests[i].worldRank;
-					worlds.push(w);
+					ranks[w] = list[i].worldRank;
+					names.push(w);
 				}
 			}
-			worlds.sort(function(a:String, b:String):int
+			names.sort(function(a:String, b:String):int
 			{
 				return ranks[a] != ranks[b] ? ranks[a] - ranks[b] : (a < b ? -1 : (a > b ? 1 : 0));
 			});
-			worldFilter = current != null ? worlds.indexOf(current) : -1;
+			worlds[aiTab] = names;
+			worldFilter[aiTab] = current != null ? names.indexOf(current) : -1;
+		}
+
+		private function WorldFilterName():String
+		{
+			return worldFilter[tab] >= 0 ? worlds[tab][worldFilter[tab]] : T("Все миры", "All worlds");
 		}
 
 		private function PassesStateFilter(q:Object):Boolean
@@ -541,14 +554,24 @@ package
 
 		private function Filter():void
 		{
+			shown = [];
+			var world:String = worldFilter[tab] >= 0 ? worlds[tab][worldFilter[tab]] : null;
+			var i:int;
 			if (tab == 1)
 			{
-				shown = locations;
+				for (i = 0; i < locations.length; i++)
+				{
+					var l:Object = locations[i];
+					var interior:Boolean = l.kind == KIND_INTERIOR;
+					if ((!seenOnly || l.seen) && (placeFilter == 0 || interior == (placeFilter == 2))
+						&& (world == null || l.world == world))
+					{
+						shown.push(l);
+					}
+				}
 				return;
 			}
-			shown = [];
-			var world:String = worldFilter >= 0 ? worlds[worldFilter] : null;
-			for (var i:int = 0; i < quests.length; i++)
+			for (i = 0; i < quests.length; i++)
 			{
 				var q:Object = quests[i];
 				if (InCategory(q) && PassesStateFilter(q) && (!markerOnly || q.dist != -1) && (world == null || q.world == world))
@@ -564,15 +587,29 @@ package
 			var i:int = filterButtons.indexOf(ButtonOf(filterButtons, e.currentTarget));
 			if (i == 0)
 			{
-				stateFilter = (stateFilter + 1) % STATE_FILTERS;
+				if (tab == 0)
+				{
+					stateFilter = (stateFilter + 1) % STATE_FILTERS;
+				}
+				else
+				{
+					seenOnly = !seenOnly;
+				}
 			}
 			else if (i == 1)
 			{
-				markerOnly = !markerOnly;
+				if (tab == 0)
+				{
+					markerOnly = !markerOnly;
+				}
+				else
+				{
+					placeFilter = (placeFilter + 1) % 3;
+				}
 			}
 			else if (i == 2)
 			{
-				worldFilter = worldFilter + 1 >= worlds.length ? -1 : worldFilter + 1;
+				worldFilter[tab] = worldFilter[tab] + 1 >= worlds[tab].length ? -1 : worldFilter[tab] + 1;
 			}
 			scroll = 0;
 			PlaySound("UIMenuFocus");
@@ -586,26 +623,27 @@ package
 		private function ShowAll():void
 		{
 			Filter();
-			var questTab:Boolean = tab == 0;
-			treeBox.visible = questTab;
-			for (var f:int = 0; f < filterButtons.length; f++)
-			{
-				filterButtons[f].sprite.visible = questTab;
-			}
+			treeBox.visible = tab == 0;
 			LayoutList();
-			if (questTab)
+			if (tab == 0)
 			{
 				ShowTree();
 				SetText(filterButtons[0].text, StateFilterName());
 				SetText(filterButtons[1].text, markerOnly ? T("Только с маркером", "With a marker") : T("С маркером и без", "Marker or not"));
-				SetCell(filterButtons[2].text, worldFilter >= 0 ? worlds[worldFilter] : T("Все миры", "All worlds"));
-				for (f = 0; f < filterButtons.length; f++)
-				{
-					DrawFrame(filterButtons[f].back, filterButtons[f].w, filterButtons[f].h, false);
-				}
+			}
+			else
+			{
+				SetText(filterButtons[0].text, seenOnly ? T("Замеченные", "Seen") : T("Все (спойлеры)", "All (spoilers)"));
+				SetText(filterButtons[1].text, placeFilter == 0 ? T("Локации и интерьеры", "Places and interiors")
+					: (placeFilter == 1 ? T("Только локации", "Locations only") : T("Только интерьеры", "Interiors only")));
+			}
+			SetCell(filterButtons[2].text, WorldFilterName());
+			for (var f:int = 0; f < filterButtons.length; f++)
+			{
+				DrawFrame(filterButtons[f].back, filterButtons[f].w, filterButtons[f].h, false);
 			}
 			SetText(tabButtons[0].text, T("Квесты", "Quests") + " (" + NotCompletedCount() + ")");
-			SetText(tabButtons[1].text, T("Локации", "Locations") + " (" + locations.length + "/" + locationsAll + ")");
+			SetText(tabButtons[1].text, T("Локации", "Locations") + " (" + locationsSeen + "/" + locations.length + ")");
 			for (var t:int = 0; t < tabButtons.length; t++)
 			{
 				DrawTab(tabButtons[t], false);
@@ -726,7 +764,7 @@ package
 			}
 			if (data.kind == KIND_LOCATION)
 			{
-				return data.onMap ? T("на карте", "on the map") : T("на компасе", "on the compass");
+				return data.onMap ? T("на карте", "on the map") : (data.seen ? T("на компасе", "on the compass") : T("не замечена", "not seen"));
 			}
 			switch (data.state)
 			{
@@ -891,7 +929,7 @@ package
 				panel.addChild(tabButton.sprite);
 			}
 			// Фильтры вкладки «Квесты» — справа от вкладок: состояние, маркер, мир.
-			var filterW:Array = [190, 190, 170];
+			var filterW:Array = [190, 230, 170];
 			var fx:Number = PANEL_W - MARGIN;
 			for (var f:int = filterW.length - 1; f >= 0; f--)
 			{
