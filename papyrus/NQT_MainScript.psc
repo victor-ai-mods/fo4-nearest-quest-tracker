@@ -1,45 +1,72 @@
 Scriptname NQT_MainScript extends Quest
-{Nearest Quest Tracker. MCM hotkeys: TrackNearest tracks the Pip-Boy quest whose marker is closest (by the
-engine's path through doors, see NearestQuestTracker.dll) and optionally untracks the others; ExcludeCurrent
-puts the tracked quest on the exclusion list and tracks the next nearest; RestoreLast takes the last one back.
-Auto mode re-tracks the nearest quest whenever the Pip-Boy objectives change.
-Quests not started yet (QuestStarts.json, read by the DLL): ShowNearestStart puts a marker on the nearest
-start point (NQT_StartQuest, a Miscellaneous quest with one objective on alias StartRef); with "Include quests
-not started" on, TrackNearest compares start points and Pip-Boy quests together. With "Include quests without a
-marker" on, Pip-Boy quests whose objectives have no target are tracked too, after the quests with a marker in the
-same world (the DLL orders by world: the player's, Commonwealth, Far Harbor, Nuka-World).}
+{Nearest Quest Tracker. MCM hotkeys: TrackNearest marks the nearest target among the kinds turned on in MCM
+(NQT_IncludeQuests: Pip-Boy quests, by the engine's path through doors, see NearestQuestTracker.dll; with
+NQT_IncludeNoMarker also Pip-Boy quests without a marker; NQT_IncludeStarts: start points of quests not started yet
+from QuestStarts.json; NQT_IncludeLocations: map markers not discovered yet; NQT_IncludeInteriors: interiors never
+entered, by the Pip-Boy local map fog of war), all mixed by distance within a world (the DLL orders by world: the
+player's, Commonwealth, Far Harbor, Nuka-World). A Pip-Boy quest is tracked with SetActive; a start point and a
+location get a marker of their own (NQT_StartQuest, NQT_LocationQuest: Miscellaneous quests with one objective on one
+alias); an interior shares the location marker, put on the door into it. With NQT_UntrackOthers every other marker is removed.
+ExcludeCurrent puts the marked target on the exclusion list and marks the next nearest; RestoreLast takes the last
+one back. Auto mode marks the nearest target again whenever the Pip-Boy objectives change, a start marker's quest
+starts, the marked location is discovered or the marked interior entered.}
 
 GlobalVariable Property NQT_UntrackOthers Auto Const Mandatory
-{1 = untrack every other Pip-Boy quest (MCM).}
+{1 = only one marker: TrackNearest removes all others (MCM).}
 GlobalVariable Property NQT_Notifications Auto Const Mandatory
-{1 = show a notification with the tracked quest (MCM).}
+{1 = show a notification with the marked target (MCM).}
 GlobalVariable Property NQT_AutoTrack Auto Const Mandatory
-{1 = track the nearest quest by itself when an objective is completed or a quest starts (MCM).}
+{1 = mark the nearest target by itself when an objective is completed, a quest starts or a location is found (MCM).}
 FormList Property NQT_ExcludedList Auto Const Mandatory
-{Copy of Excluded for the DLL: these quests are never picked and always untracked.}
+{Quests of ExcludedItems for the DLL: never picked, always untracked.}
 Quest Property NQT_StartQuest Auto Const Mandatory
 {Start marker: objective StartObjective points at alias StartAlias; the DLL sets the objective text.}
 GlobalVariable Property NQT_IncludeStarts Auto Const Mandatory
-{1 = TrackNearest and the auto mode also consider quests not started yet (MCM).}
+{1 = TrackNearest picks start points of quests not started yet (MCM "Pick new quests").}
 GlobalVariable Property NQT_NoSpoilers Auto Const Mandatory
 {1 = the start marker and notifications do not name the quest (MCM).}
 GlobalVariable Property NQT_IncludeNoMarker Auto Const Mandatory
-{1 = TrackNearest and the auto mode also consider Pip-Boy quests without a marker (MCM).}
+{1 = TrackNearest also picks Pip-Boy quests without a marker, with NQT_IncludeQuests only (MCM).}
+Quest Property NQT_LocationQuest Auto Const Mandatory
+{Location marker: objective LocationObjective points at alias LocationRefAlias (a map marker); the DLL sets the text.}
+GlobalVariable Property NQT_AllLocations Auto Const Mandatory
+{1 = any location not discovered yet, not only those seen (MCM).}
+FormList Property NQT_ExcludedLocationList Auto Const Mandatory
+{Map markers and interior doors of ExcludedItems for the DLL: never picked (a door: its interior).}
+GlobalVariable Property NQT_IncludeQuests Auto Const Mandatory
+{1 = TrackNearest picks Pip-Boy quests (MCM "Pick active quests").}
+GlobalVariable Property NQT_IncludeLocations Auto Const Mandatory
+{1 = TrackNearest picks map locations not discovered yet (MCM "Pick undiscovered locations").}
+GlobalVariable Property NQT_IncludeInteriors Auto Const Mandatory
+{1 = TrackNearest picks interiors never entered (MCM "Pick interiors").}
+GlobalVariable Property NQT_SkipOwnedLocked Auto Const Mandatory
+{1 = interiors behind a locked door that is a crime to pick are skipped (MCM "Skip locked doors of others").}
+GlobalVariable Property NQT_ShowQuestInWindow Auto Const Mandatory
+{1 = ShowCurrentQuest shows a message window instead of notifications (MCM "Current quest in a window").}
 
-; MCM "Excluded quests" dropdown (listFromProperty): element 0 is a hint, then the names of Excluded.
+; MCM "Excluded" dropdown (listFromProperty): element 0 is a hint, then the labels of ExcludedItems.
 String[] Property ExcludedNames Auto Hidden
 ; Value of that dropdown (PropertyValueInt). MCM writes the picked index here, RestoreFromMenu resets it to 0.
 Int Property MCMRestoreChoice = 0 Auto Hidden
 
 Int SetupVersion = 0
-Quest[] Excluded        ; excluded quests, oldest first (the save keeps them)
-String[] Names          ; Pip-Boy names of Excluded, taken when each was excluded
-Quest LastTracked       ; the quest the mod tracked last
+Form[] ExcludedItems    ; excluded quests (Quest), locations (map marker) and interiors (door), oldest first
+String[] ExcludedItemNames  ; their names, taken when each was excluded
+Int[] ExcludedKinds     ; KindQuest, KindStart, KindLocation or KindInterior for each of ExcludedItems
+Int LastKind = 0        ; kind of the target the mod marked last (Kind*)
+Quest LastTracked       ; the quest the mod marked last (Pip-Boy quest or start point)
 Int LastSignature = 0   ; NQT_Native.GetObjectiveSignature at the previous auto tick
 Bool AutoPending = false
 Quest ShownStart        ; the quest whose start marker is shown; None if none
 Int ShownMarkerID = 0   ; FormID of the ref in StartRef
-Int LastSources = 1     ; sources of the last Track call (ExcludeCurrent goes on with the same kind)
+ObjectReference ShownLocation       ; the map marker (or interior door) under the location marker; None if none
+Bool ShownLocationNamed = false     ; its objective names it (else "Undiscovered location: <icon type>")
+Bool ShownInterior = false          ; ShownLocation is the door into an interior
+; Before SetupVersion 3 (moved into ExcludedItems by Setup, then None):
+Quest[] Excluded
+String[] Names
+ObjectReference[] ExcludedLocations
+String[] LocationNames
 
 Int Property AutoTimer = 1 AutoReadOnly Hidden
 Float Property AutoInterval = 2.0 AutoReadOnly Hidden
@@ -47,15 +74,28 @@ Int Property MaxExcluded = 100 AutoReadOnly Hidden
 Int Property MenuNameLength = 32 AutoReadOnly Hidden
 Int Property StartPollTimer = 2 AutoReadOnly Hidden
 Float Property StartPollInterval = 3.0 AutoReadOnly Hidden
-; Must match tools/gen_esp.py (START_OBJECTIVE, START_ALIAS).
+Int Property LocationPollTimer = 3 AutoReadOnly Hidden
+Float Property LocationPollInterval = 3.0 AutoReadOnly Hidden
+; Must match tools/gen_esp.py (START_OBJECTIVE, START_ALIAS; the location quest has the same layout).
 Int Property StartObjective = 0 AutoReadOnly Hidden
 Int Property StartAlias = 0 AutoReadOnly Hidden
+Int Property LocationObjective = 0 AutoReadOnly Hidden
+Int Property LocationRefAlias = 0 AutoReadOnly Hidden
 ; Sources for NQT_Native.FindNearestTarget.
 Int Property SourceQuests = 1 AutoReadOnly Hidden
 Int Property SourceStarts = 2 AutoReadOnly Hidden
 Int Property SourceNoMarker = 4 AutoReadOnly Hidden
-; Flags in element 2 of NQT_Native.FindNearestTarget's result.
-Int Property FlagNoMarker = 1 AutoReadOnly Hidden
+Int Property SourceLocations = 8 AutoReadOnly Hidden
+Int Property SourceInteriors = 16 AutoReadOnly Hidden
+Int Property SourceSkipOwnedLocked = 32 AutoReadOnly Hidden ; with SourceInteriors
+; Target kinds: element 0 of NQT_Native.FindNearestTarget's result, LastKind, ExcludedKinds (KindQuest for both
+; Pip-Boy kinds there).
+Int Property KindNone = 0 AutoReadOnly Hidden
+Int Property KindQuest = 1 AutoReadOnly Hidden
+Int Property KindNoMarker = 2 AutoReadOnly Hidden
+Int Property KindStart = 3 AutoReadOnly Hidden
+Int Property KindLocation = 4 AutoReadOnly Hidden
+Int Property KindInterior = 5 AutoReadOnly Hidden
 
 Event OnInit()
     Setup()
@@ -70,13 +110,21 @@ Event Actor.OnPlayerLoadGame(Actor akSender)
         SetStartText()      ; the DLL's objective text is not saved
         StartTimer(StartPollInterval, StartPollTimer)
     EndIf
-    NQT_Native.Log("OnPlayerLoadGame: " + Excluded.Length + " excluded, auto " + (NQT_AutoTrack.GetValue() != 0.0) \
-        + ", start marker " + ShownStart)
+    If ShownLocation
+        SetLocationText()   ; neither is this one
+        StartTimer(LocationPollInterval, LocationPollTimer)
+    EndIf
+    NQT_Native.Log("OnPlayerLoadGame: " + ExcludedItems.Length + " excluded, auto " + (NQT_AutoTrack.GetValue() != 0.0) \
+        + ", sources " + Sources() + ", start marker " + ShownStart + ", location marker " + ShownLocation)
 EndEvent
 
 Event OnTimer(Int aiTimerID)
     If aiTimerID == StartPollTimer
         PollStart()
+        Return
+    EndIf
+    If aiTimerID == LocationPollTimer
+        PollLocation()
         Return
     EndIf
     If aiTimerID != AutoTimer || NQT_AutoTrack.GetValue() == 0.0
@@ -91,26 +139,50 @@ Event OnTimer(Int aiTimerID)
         AutoPending = true
     ElseIf AutoPending
         AutoPending = false
-        Track(true, Sources())
+        Track(true)
     EndIf
     StartTimer(AutoInterval, AutoTimer)
 EndEvent
 
-; Runs once per save: from OnInit, and from every entry point for saves made before 2.0 (there the quest
-; already ran OnInit, so nothing is registered until a hotkey or an MCM action calls this).
+; Runs each step once per save: from OnInit, and from every entry point for saves made before the step existed
+; (there the quest already ran OnInit, so nothing is set up until a hotkey, an MCM action or a load calls this).
+; Version 1: events and auto mode; 2: excluded locations (development builds only); 3: one exclusion list for
+; quests and locations (the lists of versions 1 and 2 move into it).
 Function Setup()
-    If SetupVersion >= 1
-        Return
+    If SetupVersion < 1
+        RegisterForRemoteEvent(Game.GetPlayer(), "OnPlayerLoadGame")
+        StartAuto()
     EndIf
-    SetupVersion = 1
-    RegisterForRemoteEvent(Game.GetPlayer(), "OnPlayerLoadGame")
-    Excluded = new Quest[1]
-    Excluded.Clear()
-    Names = new String[1]
-    Names.Clear()
-    NQT_ExcludedList.Revert()
-    SyncExcluded()
-    StartAuto()
+    If SetupVersion < 3
+        ExcludedItems = new Form[1]
+        ExcludedItems.Clear()
+        ExcludedItemNames = new String[1]
+        ExcludedItemNames.Clear()
+        ExcludedKinds = new Int[1]
+        ExcludedKinds.Clear()
+        Int i = 0
+        While Excluded != None && i < Excluded.Length
+            Quest q = Excluded[i]
+            Int kind = KindQuest
+            If q && !q.IsRunning() && NQT_Native.HasQuestStart(q)
+                kind = KindStart
+            EndIf
+            AddExcluded(q, Names[i], kind)
+            i += 1
+        EndWhile
+        i = 0
+        While ExcludedLocations != None && i < ExcludedLocations.Length
+            AddExcluded(ExcludedLocations[i], LocationNames[i], KindLocation)
+            i += 1
+        EndWhile
+        Excluded = None
+        Names = None
+        ExcludedLocations = None
+        LocationNames = None
+        SyncExcluded()
+        NQT_Native.Log("Setup: version " + SetupVersion + " -> 3, " + ExcludedItems.Length + " excluded")
+    EndIf
+    SetupVersion = 3
 EndFunction
 
 ; ---------------------------------------------------------------------------------------------------
@@ -118,96 +190,208 @@ EndFunction
 
 Function TrackNearest()
     Setup()
-    Track(false, Sources())
+    Track(false)
 EndFunction
 
-Function ShowNearestStart()
-    Setup()
-    Track(false, SourceStarts)
-EndFunction
-
+; Excludes the marked target (see PickToExclude) and marks the next nearest one.
 Function ExcludeCurrent()
     Setup()
     Cleanup()
     Bool russian = IsRussian()
-    Quest target = PickToExclude()
-    If !target
-        NQT_Native.Log("ExcludeCurrent: no tracked quest")
-        Notify(russian, "Нет отмеченного квеста", "No tracked quest")
+    Int kind = PickToExclude()
+    If kind == KindNone
+        NQT_Native.Log("ExcludeCurrent: nothing marked")
+        Notify(russian, "Ничего не отмечено", "Nothing is marked")
         Return
     EndIf
-    Bool wasStart = target == ShownStart
+    Form target
     String name
-    If wasStart
-        name = StartName(target, russian)
-    Else
-        name = NQT_Native.GetQuestDisplayName(target)
-    EndIf
-    If Excluded.Length >= MaxExcluded
-        Excluded.Remove(0)
-        Names.Remove(0)
-    EndIf
-    Excluded.Add(target)
-    Names.Add(name)
-    SyncExcluded()
-    Int sources = Sources()
-    If wasStart
-        sources = LastSources   ; the next start point when the start hotkey was used
+    If kind == KindLocation || kind == KindInterior
+        target = ShownLocation
+        name = LocationName(ShownLocation, ShownLocationNamed, ShownInterior, russian)
+        ClearLocation()
+    ElseIf kind == KindStart
+        target = ShownStart
+        name = StartName(ShownStart, russian)
         ClearStart()
     Else
-        target.SetActive(false)
+        Quest q = LastTracked
+        target = q
+        name = NQT_Native.GetQuestDisplayName(q)
+        q.SetActive(false)
     EndIf
-    If LastTracked == target
+    If target == LastTracked
         LastTracked = None
     EndIf
-    NQT_Native.Log("ExcludeCurrent: " + target + " '" + name + "' (start " + wasStart + "), " + Excluded.Length + " excluded")
-    Notify(russian, "Исключён: " + name, "Excluded: " + name)
-    Track(false, sources)
+    LastKind = KindNone
+    If ExcludedItems.Length >= MaxExcluded
+        RemoveExcludedAt(0)
+    EndIf
+    AddExcluded(target, name, kind)
+    SyncExcluded()
+    NQT_Native.Log("ExcludeCurrent: " + target + " '" + name + "' (kind " + kind + "), " + ExcludedItems.Length + " excluded")
+    Notify(russian, "Исключено: " + name, "Excluded: " + name)
+    Track(false)
 EndFunction
 
 Function RestoreLast()
     Setup()
     Cleanup()
     Bool russian = IsRussian()
-    If Excluded.Length == 0
-        Notify(russian, "Нет исключённых квестов", "No excluded quests")
+    If ExcludedItems.Length == 0
+        Notify(russian, "Список исключённого пуст", "Nothing is excluded")
         Return
     EndIf
-    Int last = Excluded.Length - 1
-    String name = Names[last]
-    NQT_Native.Log("RestoreLast: " + Excluded[last] + " '" + name + "'")
+    Int last = ExcludedItems.Length - 1
+    String name = ExcludedItemNames[last]
+    NQT_Native.Log("RestoreLast: " + ExcludedItems[last] + " '" + name + "'")
     RemoveExcludedAt(last)
-    Notify(russian, "Возвращён: " + name, "Restored: " + name)
-    Track(false, Sources())
+    SyncExcluded()
+    Notify(russian, "Возвращено: " + name, "Restored: " + name)
+    Track(false)
+EndFunction
+
+; Turns the auto mode (NQT_AutoTrack, MCM "Automatic") on or off. The notification is shown even with
+; NQT_Notifications off: it is the only sign the key worked.
+Function ToggleAutoTrack()
+    Setup()
+    Bool russian = IsRussian()
+    If NQT_AutoTrack.GetValue() != 0.0
+        NQT_AutoTrack.SetValue(0.0)
+        Debug.Notification(Choose(russian, "Автоматический режим выключен", "Automatic mode off"))
+    Else
+        NQT_AutoTrack.SetValue(1.0)
+        Debug.Notification(Choose(russian, "Автоматический режим включён", "Automatic mode on"))
+    EndIf
+    NQT_Native.Log("ToggleAutoTrack: auto " + NQT_AutoTrack.GetValue())
+    StartAuto()
+EndFunction
+
+; Names what is marked now and what to do there: the tracked Pip-Boy quests and the mod's own start and location
+; markers (NQT_StartQuest, NQT_LocationQuest - GetTrackedQuestList leaves them out), the target the mod marked last
+; first. One notification per line, or with NQT_ShowQuestInWindow one message window. A Miscellaneous quest (the
+; markers too) has no name of its own: only its objectives. Shown even with NQT_Notifications off: showing is what
+; the key is for.
+Function ShowCurrentQuest()
+    Setup()
+    Bool russian = IsRussian()
+    Bool window = NQT_ShowQuestInWindow.GetValue() != 0.0
+    Quest[] quests = new Quest[1]
+    quests.Clear()
+    Bool startShown = NQT_StartQuest.IsActive() && NQT_StartQuest.IsObjectiveDisplayed(StartObjective)
+    Bool locationShown = NQT_LocationQuest.IsActive() && NQT_LocationQuest.IsObjectiveDisplayed(LocationObjective)
+    If (LastKind == KindLocation || LastKind == KindInterior) && locationShown
+        quests.Add(NQT_LocationQuest)
+    ElseIf LastKind == KindStart && startShown
+        quests.Add(NQT_StartQuest)
+    ElseIf (LastKind == KindQuest || LastKind == KindNoMarker) && LastTracked && LastTracked.IsActive()
+        quests.Add(LastTracked)
+    EndIf
+    Quest[] tracked = NQT_Native.GetTrackedQuestList()
+    Int i = 0
+    While i < tracked.Length
+        If tracked[i] && tracked[i].IsActive() && quests.Find(tracked[i]) < 0
+            quests.Add(tracked[i])
+        EndIf
+        i += 1
+    EndWhile
+    If startShown && quests.Find(NQT_StartQuest) < 0
+        quests.Add(NQT_StartQuest)
+    EndIf
+    If locationShown && quests.Find(NQT_LocationQuest) < 0
+        quests.Add(NQT_LocationQuest)
+    EndIf
+
+    String text = ""
+    Int count = 0
+    i = 0
+    While i < quests.Length
+        Quest q = quests[i]
+        String[] objectives = NQT_Native.GetObjectiveTexts(q)
+        String name = NQT_Native.GetQuestDisplayName(q)
+        Bool misc = objectives.Find(name) >= 0    ; a Miscellaneous quest is named by its objective
+        NQT_Native.Log("ShowCurrentQuest: " + q + " '" + name + "', " + objectives.Length + " objectives, misc " + misc)
+        If objectives.Length > 0
+            If window && count > 0
+                text += "\n\n"
+            EndIf
+            If !misc
+                If window
+                    text += name
+                Else
+                    Debug.Notification(name)
+                EndIf
+            EndIf
+            Int j = 0
+            While j < objectives.Length
+                String line = objectives[j]
+                If !misc
+                    line = "- " + line
+                EndIf
+                If window
+                    If !misc || j > 0
+                        text += "\n"
+                    EndIf
+                    text += line
+                Else
+                    Debug.Notification(line)
+                EndIf
+                j += 1
+            EndWhile
+            count += 1
+        EndIf
+        i += 1
+    EndWhile
+    If count == 0
+        NQT_Native.Log("ShowCurrentQuest: no tracked quest")
+        Debug.Notification(Choose(russian, "Нет отслеживаемых квестов", "No quest is tracked"))
+    ElseIf window
+        Debug.MessageBox(text)
+    EndIf
 EndFunction
 
 ; ---------------------------------------------------------------------------------------------------
-; MCM page (config.json)
+; MCM page (config.json). Like the restore hotkey, a restored target takes part in the search at once.
 
-; Dropdown of excluded quests: aiChoice is the picked element of ExcludedNames (0 = the hint).
-; Like the restore hotkey, a restored quest takes part in the search at once: the nearest quest is re-tracked.
+; "Excluded" dropdown: aiChoice is the picked element of ExcludedNames (0 = the hint).
 Function RestoreFromMenu(Int aiChoice)
     Setup()
     MCMRestoreChoice = 0
     Int index = aiChoice - 1
-    If index < 0 || index >= Excluded.Length
+    If index < 0 || index >= ExcludedItems.Length
         MCM.RefreshMenu()
         Return
     EndIf
-    NQT_Native.Log("RestoreFromMenu: " + Excluded[index] + " '" + Names[index] + "'")
+    NQT_Native.Log("RestoreFromMenu: " + ExcludedItems[index] + " '" + ExcludedItemNames[index] + "'")
     RemoveExcludedAt(index)
+    SyncExcluded()
     MCM.RefreshMenu()
-    Track(false, Sources())
+    Track(false)
 EndFunction
 
 Function RestoreAll()
+    RestoreKind(KindNone)
+EndFunction
+
+; Buttons "Restore active quests" / "new quests" / "locations" / "interiors": aiKind KindQuest / KindStart /
+; KindLocation / KindInterior; KindNone = all.
+Function RestoreKind(Int aiKind)
     Setup()
-    NQT_Native.Log("RestoreAll: " + Excluded.Length + " quests")
-    Excluded.Clear()
-    Names.Clear()
+    Int count = 0
+    Int i = ExcludedItems.Length - 1
+    While i >= 0
+        If aiKind == KindNone || ExcludedKinds[i] == aiKind
+            RemoveExcludedAt(i)
+            count += 1
+        EndIf
+        i -= 1
+    EndWhile
+    NQT_Native.Log("RestoreKind(" + aiKind + "): " + count + " restored")
     SyncExcluded()
     MCM.RefreshMenu()
-    Track(false, Sources())
+    If count > 0
+        Track(false)
+    EndIf
 EndFunction
 
 ; "Automatic" switcher: its action runs after MCM has set NQT_AutoTrack.
@@ -226,82 +410,112 @@ EndFunction
 
 ; ---------------------------------------------------------------------------------------------------
 
-; Tracks the nearest non-excluded quest and untracks the others (see UntrackOthers). aiSources: SourceQuests
-; (Pip-Boy quests) and/or SourceStarts (start points of quests not started yet): if a start point wins, its
-; marker is shown instead of SetActive; otherwise a start marker shown before is removed. abAuto: called by the
-; auto mode, which stays silent when nothing changes. Returns the tracked quest or None.
-Quest Function Track(Bool abAuto, Int aiSources)
+; Marks the nearest non-excluded target of the kinds turned on (Sources): a Pip-Boy quest is tracked, a start
+; point or a location gets its marker. With NQT_UntrackOthers every other marker goes (other Pip-Boy quests,
+; the start marker, the location marker); without it only excluded quests are untracked. abAuto: called by the
+; auto mode, which stays silent when nothing changes. Returns true if something is marked.
+Bool Function Track(Bool abAuto)
     Cleanup()
-    LastSources = aiSources
-    Int[] found = NQT_Native.FindNearestTarget(NQT_ExcludedList, aiSources)
-    Quest nearest = None
-    If found[0] != 0
-        nearest = Game.GetForm(found[0]) as Quest
-    EndIf
-    Bool isStart = nearest && found[1] != 0
-    Bool noMarker = nearest && found[2] == FlagNoMarker   ; the only flag so far
-    Bool alreadyTracked
-    If isStart
-        alreadyTracked = nearest == ShownStart && NQT_StartQuest.IsActive()
-        If !ShowStart(nearest, found[1])
-            nearest = None
-            isStart = false
+    Bool russian = IsRussian()
+    Int sources = Sources()
+    If sources == 0
+        NQT_Native.Log("Track(auto " + abAuto + "): no kinds of targets turned on")
+        If !abAuto
+            Notify(russian, "Ничего не выбрано — включите цели в настройках", "Nothing to pick - turn targets on in the settings")
         EndIf
-    Else
-        ClearStart()
-        alreadyTracked = nearest && nearest.IsActive()
-        If nearest
-            nearest.SetActive(true)
-        EndIf
+        Return false
     EndIf
+    Int[] found = NQT_Native.FindNearestTarget(NQT_ExcludedList, NQT_ExcludedLocationList, sources, NQT_AllLocations.GetValue() != 0.0)
+    Int kind = found[0]
+    Quest q = None
+    If found[1] != 0
+        q = Game.GetForm(found[1]) as Quest
+    EndIf
+    ObjectReference marker = None
+    If found[2] != 0
+        marker = Game.GetForm(found[2]) as ObjectReference
+    EndIf
+
+    Bool alreadyTracked = false
+    Bool shown = false
+    If (kind == KindLocation || kind == KindInterior) && marker
+        alreadyTracked = marker == ShownLocation && NQT_LocationQuest.IsObjectiveDisplayed(LocationObjective)
+        shown = ShowLocation(marker, kind == KindInterior)
+    ElseIf kind == KindStart && q
+        alreadyTracked = q == ShownStart && NQT_StartQuest.IsActive()
+        shown = ShowStart(q, found[2])
+    ElseIf (kind == KindQuest || kind == KindNoMarker) && q
+        alreadyTracked = q.IsActive()
+        q.SetActive(true)
+        shown = true
+    EndIf
+    If !shown
+        kind = KindNone
+        q = None
+    EndIf
+
     Quest keep = None
-    If !isStart
-        keep = nearest
+    If kind == KindQuest || kind == KindNoMarker
+        keep = q
     EndIf
     Int untracked = UntrackOthers(keep)
-    LastTracked = nearest
-
-    Bool russian = IsRussian()
-    If !nearest
-        NQT_Native.Log("Track(auto " + abAuto + ", sources " + aiSources + "): nothing found; untracked " + untracked)
-        If abAuto
-            ; silent
-        ElseIf aiSources == SourceStarts
-            Notify(russian, "Нет доступных новых квестов", "No new quests available")
-        Else
-            Notify(russian, "Нет квестов с маркером", "No quests with a marker")
+    If NQT_UntrackOthers.GetValue() != 0.0
+        If kind != KindStart
+            ClearStart()
         EndIf
-        Return None
+        If kind != KindLocation && kind != KindInterior
+            ClearLocation()
+        EndIf
+    EndIf
+    LastKind = kind
+    LastTracked = q
+
+    If kind == KindNone
+        NQT_Native.Log("Track(auto " + abAuto + ", sources " + sources + "): nothing found; untracked " + untracked)
+        If !abAuto
+            Notify(russian, "Нет подходящих целей", "No targets found")
+        EndIf
+        Return false
     EndIf
 
-    String name
-    If isStart
-        name = StartName(nearest, russian)
+    String label
+    If kind == KindLocation || kind == KindInterior
+        label = LocationLabel(marker, ShownLocationNamed, ShownInterior, russian)
+    ElseIf kind == KindStart
+        label = StartLabel(q, russian)
+    ElseIf kind == KindNoMarker
+        label = Choose(russian, "Отслеживается: " + NQT_Native.GetQuestDisplayName(q) + " (без маркера)", \
+            "Tracking: " + NQT_Native.GetQuestDisplayName(q) + " (no marker)")
     Else
-        name = NQT_Native.GetQuestDisplayName(nearest)
+        label = Choose(russian, "Отслеживается: ", "Tracking: ") + NQT_Native.GetQuestDisplayName(q)
     EndIf
-    NQT_Native.Log("Track(auto " + abAuto + ", sources " + aiSources + "): " + nearest + " '" + name + "' start " + isStart + " noMarker " + noMarker \
-        + " at " + NQT_Native.GetQuestDistance(nearest) + "; untracked " + untracked)
+    NQT_Native.Log("Track(auto " + abAuto + ", sources " + sources + "): kind " + kind + " " + q + " " + marker + " '" + label \
+        + "'; untracked " + untracked)
     If !abAuto || !alreadyTracked
-        If isStart
-            String label = StartLabel(nearest, russian)
-            Notify(russian, label, label)
-        ElseIf noMarker
-            Notify(russian, "Отслеживается: " + name + " (без маркера)", "Tracking: " + name + " (no marker)")
-        Else
-            Notify(russian, "Отслеживается: " + name, "Tracking: " + name)
-        EndIf
+        Notify(russian, label, label)
     EndIf
-    Return nearest
+    Return true
 EndFunction
 
 Int Function Sources()
-    Int sources = SourceQuests
+    Int sources = 0
+    If NQT_IncludeQuests.GetValue() != 0.0
+        sources += SourceQuests
+        If NQT_IncludeNoMarker.GetValue() != 0.0
+            sources += SourceNoMarker
+        EndIf
+    EndIf
     If NQT_IncludeStarts.GetValue() != 0.0
         sources += SourceStarts
     EndIf
-    If NQT_IncludeNoMarker.GetValue() != 0.0
-        sources += SourceNoMarker
+    If NQT_IncludeLocations.GetValue() != 0.0
+        sources += SourceLocations
+    EndIf
+    If NQT_IncludeInteriors.GetValue() != 0.0
+        sources += SourceInteriors
+        If NQT_SkipOwnedLocked.GetValue() != 0.0
+            sources += SourceSkipOwnedLocked
+        EndIf
     EndIf
     Return sources
 EndFunction
@@ -354,7 +568,7 @@ Function ClearStart()
 EndFunction
 
 ; While a start marker is shown: move it onto the giver once the giver is in memory (its cell loaded), and
-; remove it once the quest has started or the giver is dead or disabled (the auto mode then re-tracks).
+; remove it once the quest has started or the giver is dead or disabled (the auto mode then marks the next).
 Function PollStart()
     If !ShownStart
         Return
@@ -364,7 +578,7 @@ Function PollStart()
         NQT_Native.Log("PollStart: " + ShownStart + " started or no longer available")
         ClearStart()
         If NQT_AutoTrack.GetValue() != 0.0
-            Track(true, Sources())
+            Track(true)
         EndIf
         Return
     EndIf
@@ -417,6 +631,136 @@ String Function StartName(Quest akQuest, Bool abRussian)
     Return name
 EndFunction
 
+; ---------------------------------------------------------------------------------------------------
+; Location marker
+
+; Points LocationRef at the map marker (abInterior: the door into the interior) and shows the objective (again if
+; the target changed, so that the HUD names the new one). Named: an interior, a location on the map (seen), or
+; "All locations" is on.
+Bool Function ShowLocation(ObjectReference akMarker, Bool abInterior)
+    ReferenceAlias locationRef = NQT_LocationQuest.GetAlias(LocationRefAlias) as ReferenceAlias
+    If !locationRef
+        NQT_Native.Log("ShowLocation: no alias " + LocationRefAlias)
+        Return false
+    EndIf
+    If !NQT_LocationQuest.IsRunning()
+        NQT_LocationQuest.Start()
+    EndIf
+    Bool changed = akMarker != ShownLocation
+    ShownLocation = akMarker
+    ShownInterior = abInterior
+    ShownLocationNamed = abInterior || NQT_AllLocations.GetValue() != 0.0 || akMarker.IsMapMarkerVisible()
+    locationRef.ForceRefTo(akMarker)
+    SetLocationText()
+    If changed || !NQT_LocationQuest.IsObjectiveDisplayed(LocationObjective)
+        NQT_LocationQuest.SetObjectiveDisplayed(LocationObjective, false)
+        NQT_LocationQuest.SetObjectiveDisplayed(LocationObjective, true, true)
+    EndIf
+    NQT_LocationQuest.SetActive(true)
+    CancelTimer(LocationPollTimer)
+    StartTimer(LocationPollInterval, LocationPollTimer)
+    Return true
+EndFunction
+
+Function ClearLocation()
+    If !ShownLocation && !NQT_LocationQuest.IsObjectiveDisplayed(LocationObjective)
+        Return
+    EndIf
+    NQT_Native.Log("ClearLocation: " + ShownLocation)
+    CancelTimer(LocationPollTimer)
+    ShownLocation = None
+    ShownLocationNamed = false
+    ShownInterior = false
+    NQT_LocationQuest.SetObjectiveDisplayed(LocationObjective, false)
+    ReferenceAlias locationRef = NQT_LocationQuest.GetAlias(LocationRefAlias) as ReferenceAlias
+    If locationRef
+        locationRef.Clear()
+    EndIf
+    NQT_LocationQuest.SetActive(false)
+EndFunction
+
+; While the location marker is shown: remove it once the location is discovered (the game says so itself), the
+; interior entered, or the marker or door disabled, and with the auto mode mark the next target; name a location
+; once it appears on the map.
+Function PollLocation()
+    If !ShownLocation
+        Return
+    EndIf
+    Bool done
+    If ShownInterior
+        done = NQT_Native.IsInteriorVisited(ShownLocation)
+    Else
+        done = ShownLocation.CanFastTravelToMarker()
+    EndIf
+    If done || ShownLocation.IsDisabled()
+        NQT_Native.Log("PollLocation: " + ShownLocation + " discovered, entered or disabled (interior " + ShownInterior + ")")
+        ClearLocation()
+        If NQT_AutoTrack.GetValue() != 0.0
+            Track(true)
+        EndIf
+        Return
+    EndIf
+    If !ShownLocationNamed && ShownLocation.IsMapMarkerVisible()
+        ShownLocationNamed = true
+        SetLocationText()
+    EndIf
+    StartTimer(LocationPollInterval, LocationPollTimer)
+EndFunction
+
+Function SetLocationText()
+    NQT_Native.SetObjectiveText(NQT_LocationQuest, LocationObjective, LocationLabel(ShownLocation, ShownLocationNamed, ShownInterior, IsRussian()))
+EndFunction
+
+; Objective text and notification: "Location: <name>", or "Undiscovered location: <icon type>" for a location
+; not on the map (the compass shows only its icon); "Interior: <name>" for the door into an interior.
+String Function LocationLabel(ObjectReference akMarker, Bool abNamed, Bool abInterior, Bool abRussian)
+    If abInterior
+        String interior = NQT_Native.GetInteriorName(akMarker)
+        If interior != ""
+            Return Choose(abRussian, "Интерьер: ", "Interior: ") + interior
+        EndIf
+        Return Choose(abRussian, "Интерьер", "Interior")
+    EndIf
+    If abNamed
+        String name = NQT_Native.GetMapMarkerName(akMarker)
+        If name != ""
+            Return Choose(abRussian, "Локация: ", "Location: ") + name
+        EndIf
+    EndIf
+    String type = NQT_Native.GetMapMarkerTypeName(akMarker)
+    If type != ""
+        Return Choose(abRussian, "Неоткрытая локация: ", "Undiscovered location: ") + type
+    EndIf
+    Return Choose(abRussian, "Неоткрытая локация", "Undiscovered location")
+EndFunction
+
+; Name for the exclusion list and notifications: the location's name, or "undiscovered location (<type>)"; the
+; interior's name for a door.
+String Function LocationName(ObjectReference akMarker, Bool abNamed, Bool abInterior, Bool abRussian)
+    String name = ""
+    If abInterior
+        name = NQT_Native.GetInteriorName(akMarker)
+        If name == ""
+            name = Choose(abRussian, "интерьер", "interior")
+        EndIf
+        Return name
+    EndIf
+    If abNamed
+        name = NQT_Native.GetMapMarkerName(akMarker)
+    EndIf
+    If name != ""
+        Return name
+    EndIf
+    name = Choose(abRussian, "неоткрытая локация", "undiscovered location")
+    String type = NQT_Native.GetMapMarkerTypeName(akMarker)
+    If type != ""
+        name += " (" + type + ")"
+    EndIf
+    Return name
+EndFunction
+
+; ---------------------------------------------------------------------------------------------------
+
 ; Untracks the Pip-Boy quests other than akKeep: all of them if NQT_UntrackOthers is on, otherwise only
 ; the excluded ones. Returns how many were untracked.
 Int Function UntrackOthers(Quest akKeep)
@@ -426,7 +770,7 @@ Int Function UntrackOthers(Quest akKeep)
     Int i = 0
     While i < quests.Length
         Quest q = quests[i]
-        If q && q != akKeep && q.IsActive() && (all || Excluded.Find(q) >= 0)
+        If q && q != akKeep && q.IsActive() && (all || NQT_ExcludedList.HasForm(q))
             q.SetActive(false)
             count += 1
         EndIf
@@ -435,23 +779,30 @@ Int Function UntrackOthers(Quest akKeep)
     Return count
 EndFunction
 
-; The quest the exclude hotkey means: the one the mod tracked last, if it is still tracked and in the
-; Pip-Boy; otherwise the nearest of the tracked Pip-Boy quests. None if no quest is tracked.
-Quest Function PickToExclude()
-    Bool startShown = ShownStart && NQT_StartQuest.IsActive() && Excluded.Find(ShownStart) < 0
-    If startShown && LastTracked == ShownStart
-        Return ShownStart
+; What the exclude hotkey means: the target the mod marked last, if it is still marked; otherwise the nearest of
+; the tracked Pip-Boy quests; otherwise a start or location marker still shown. Returns its kind (the target is
+; LastTracked, ShownStart or ShownLocation; KindLocation or KindInterior for the latter); KindNone if nothing is
+; marked.
+Int Function PickToExclude()
+    Bool startShown = ShownStart && NQT_StartQuest.IsActive() && !NQT_ExcludedList.HasForm(ShownStart)
+    Bool locationShown = ShownLocation && NQT_LocationQuest.IsObjectiveDisplayed(LocationObjective)
+    If (LastKind == KindLocation || LastKind == KindInterior) && locationShown
+        Return ShownLocationKind()
+    EndIf
+    If LastKind == KindStart && startShown && LastTracked == ShownStart
+        Return KindStart
     EndIf
     Quest[] quests = NQT_Native.GetTrackedQuestList()
-    If LastTracked && LastTracked.IsActive() && quests.Find(LastTracked) >= 0 && Excluded.Find(LastTracked) < 0
-        Return LastTracked
+    If (LastKind == KindQuest || LastKind == KindNoMarker) && LastTracked && LastTracked.IsActive() \
+            && quests.Find(LastTracked) >= 0 && !NQT_ExcludedList.HasForm(LastTracked)
+        Return KindQuest
     EndIf
     Quest best = None
     Float bestDistance = 0.0
     Int i = 0
     While i < quests.Length
         Quest q = quests[i]
-        If q && q.IsActive() && Excluded.Find(q) < 0
+        If q && q.IsActive() && !NQT_ExcludedList.HasForm(q)
             Float distance = NQT_Native.GetQuestDistance(q)
             If distance == -2.0          ; another worldspace
                 distance = 1000000000.0
@@ -465,23 +816,62 @@ Quest Function PickToExclude()
         EndIf
         i += 1
     EndWhile
-    If !best && startShown
-        Return ShownStart
+    If best
+        LastTracked = best
+        Return KindQuest
     EndIf
-    Return best
+    If startShown
+        LastTracked = ShownStart
+        Return KindStart
+    EndIf
+    If locationShown
+        Return ShownLocationKind()
+    EndIf
+    Return KindNone
 EndFunction
 
-; Completed or stopped quests leave the exclusion list (the exclusion was for that run of the quest). A quest
-; with a start point (QuestStarts.json) is often not running before it starts, so only completion counts there.
+Int Function ShownLocationKind()
+    If ShownInterior
+        Return KindInterior
+    EndIf
+    Return KindLocation
+EndFunction
+
+; ---------------------------------------------------------------------------------------------------
+; Exclusion list
+
+Function AddExcluded(Form akItem, String asName, Int aiKind)
+    ExcludedItems.Add(akItem)
+    ExcludedItemNames.Add(asName)
+    ExcludedKinds.Add(aiKind)
+EndFunction
+
+Function RemoveExcludedAt(Int aiIndex)
+    ExcludedItems.Remove(aiIndex)
+    ExcludedItemNames.Remove(aiIndex)
+    ExcludedKinds.Remove(aiIndex)
+EndFunction
+
+; Done targets leave the exclusion list (the exclusion was for that run of the quest; a discovered location or an
+; entered interior has nothing left to skip). A quest with a start point (QuestStarts.json) is often not running before it starts, so
+; only completion counts there.
 Function Cleanup()
     Bool changed = false
-    Int i = Excluded.Length - 1
+    Int i = ExcludedItems.Length - 1
     While i >= 0
-        Quest q = Excluded[i]
-        If !q || q.IsCompleted() || (!q.IsRunning() && !NQT_Native.HasQuestStart(q))
-            NQT_Native.Log("Cleanup: " + q + " '" + Names[i] + "' is no longer running")
-            Excluded.Remove(i)
-            Names.Remove(i)
+        Bool done
+        If ExcludedKinds[i] == KindLocation
+            ObjectReference marker = ExcludedItems[i] as ObjectReference
+            done = !marker || marker.CanFastTravelToMarker()
+        ElseIf ExcludedKinds[i] == KindInterior
+            done = NQT_Native.IsInteriorVisited(ExcludedItems[i] as ObjectReference)
+        Else
+            Quest q = ExcludedItems[i] as Quest
+            done = !q || q.IsCompleted() || (!q.IsRunning() && !NQT_Native.HasQuestStart(q))
+        EndIf
+        If done
+            NQT_Native.Log("Cleanup: " + ExcludedItems[i] + " '" + ExcludedItemNames[i] + "' is done")
+            RemoveExcludedAt(i)
             changed = true
         EndIf
         i -= 1
@@ -491,29 +881,40 @@ Function Cleanup()
     EndIf
 EndFunction
 
-Function RemoveExcludedAt(Int aiIndex)
-    Excluded.Remove(aiIndex)
-    Names.Remove(aiIndex)
-    SyncExcluded()
-EndFunction
-
-; Copies Excluded to the FormList the DLL reads and rebuilds the MCM dropdown list.
+; Copies ExcludedItems to the FormLists the DLL reads and rebuilds the MCM dropdown list.
 Function SyncExcluded()
     NQT_ExcludedList.Revert()
+    NQT_ExcludedLocationList.Revert()
     Bool russian = IsRussian()
     ExcludedNames = new String[1]
-    If Excluded.Length == 0
+    If ExcludedItems.Length == 0
         ExcludedNames[0] = Choose(russian, "(пусто)", "(empty)")
     Else
         ExcludedNames[0] = Choose(russian, "— выберите —", "— pick one —")
     EndIf
     Int i = 0
-    While i < Excluded.Length
-        NQT_ExcludedList.AddForm(Excluded[i])
-        ExcludedNames.Add(NQT_Native.Shorten(Names[i], MenuNameLength))  ; MCM shrinks long lines to tiny text
+    While i < ExcludedItems.Length
+        String prefix
+        If ExcludedKinds[i] == KindLocation
+            NQT_ExcludedLocationList.AddForm(ExcludedItems[i])
+            prefix = Choose(russian, "Локация: ", "Location: ")
+        ElseIf ExcludedKinds[i] == KindInterior
+            NQT_ExcludedLocationList.AddForm(ExcludedItems[i])  ; the DLL skips the door's interior
+            prefix = Choose(russian, "Интерьер: ", "Interior: ")
+        Else
+            NQT_ExcludedList.AddForm(ExcludedItems[i])
+            If ExcludedKinds[i] == KindStart
+                prefix = Choose(russian, "Новый квест: ", "New quest: ")
+            Else
+                prefix = Choose(russian, "Квест: ", "Quest: ")
+            EndIf
+        EndIf
+        ExcludedNames.Add(NQT_Native.Shorten(prefix + ExcludedItemNames[i], MenuNameLength))  ; MCM shrinks long lines
         i += 1
     EndWhile
 EndFunction
+
+; ---------------------------------------------------------------------------------------------------
 
 Function StartAuto()
     CancelTimer(AutoTimer)

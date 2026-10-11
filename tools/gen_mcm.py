@@ -3,22 +3,21 @@
 
 Выход (в mod/, откуда их раскладывает tools/deploy.py):
     MCM/Config/NearestQuestTracker/config.json             — страница, тексты токенами $NQT_*
-    MCM/Config/NearestQuestTracker/keybinds.json           — хоткеи -> NQT_MainScript.TrackNearest/ShowNearestStart/
-                                                             ExcludeCurrent/RestoreLast
+    MCM/Config/NearestQuestTracker/keybinds.json           — хоткеи -> NQT_MainScript.TrackNearest/ExcludeCurrent/RestoreLast
     Interface/Translations/NearestQuestTracker_{en,ru}.txt — UTF-16 LE с BOM, TAB, CRLF
 
-Настройки — switcher прямо на глобальные переменные (sourceType GlobalValue, как во FSOC):
-NQT_UntrackOthers «снимать отметку с остальных», NQT_Notifications «уведомления», NQT_AutoTrack
-«автоматически» (его action OnAutoTrackChanged запускает/останавливает таймер), NQT_IncludeStarts
-«учитывать не начатые квесты», NQT_IncludeNoMarker «учитывать квесты без маркера», NQT_NoSpoilers «без спойлеров» (action OnNoSpoilersChanged переписывает
-текст показанного маркера старта). Значения живут
-в сохранении, скрипт читает их при каждом нажатии.
+Один хоткей «Отметить ближайшее» (TrackNearest); что он выбирает — switcher'ы «Что выбирать» прямо на глобальные
+переменные (sourceType GlobalValue, как во FSOC): NQT_IncludeQuests, NQT_IncludeNoMarker, NQT_IncludeStarts,
+NQT_NoSpoilers (action OnNoSpoilersChanged переписывает текст показанного маркера старта), NQT_IncludeLocations,
+NQT_AllLocations, NQT_IncludeInteriors, NQT_SkipOwnedLocked; настройки NQT_UntrackOthers «только один маркер», NQT_AutoTrack (action OnAutoTrackChanged
+запускает/останавливает таймер), NQT_Notifications, NQT_ShowQuestInWindow (хоткей «Показать текущий квест» — окном). Значения живут в сохранении, скрипт читает их при каждом нажатии.
 
-Список исключённых — dropdown с недокументированным ключом MCM `valueOptions.listFromProperty`
-(пункты = String[]-свойство ExcludedNames скрипта). Проверено по исходникам MCM: Neanka/MCM_0.1_AS3
-MCM_Menu.as перечитывает список при загрузке страницы и в RefreshMCM, reg2k/f4mcm GetPropertyValueEx
-отдаёт массивы. Значение — PropertyValueInt MCMRestoreChoice; выбор пункта вызывает
-RestoreFromMenu({value}), тот убирает квест и зовёт MCM.RefreshMenu(), чтобы список перечитался.
+Общий список исключённого (квесты, новые квесты, локации, интерьеры) — dropdown с недокументированным ключом MCM
+`valueOptions.listFromProperty` (пункты = String[]-свойство ExcludedNames скрипта). Проверено по исходникам MCM:
+Neanka/MCM_0.1_AS3 MCM_Menu.as перечитывает список при загрузке страницы и в RefreshMCM, reg2k/f4mcm
+GetPropertyValueEx отдаёт массивы. Значение — PropertyValueInt MCMRestoreChoice; выбор пункта вызывает
+RestoreFromMenu({value}), тот убирает пункт и зовёт MCM.RefreshMenu(), чтобы список перечитался. Кнопки «Вернуть всё /
+активные квесты / новые квесты / локации / интерьеры» — RestoreAll / RestoreKind(вид).
 
     python tools/gen_mcm.py
 """
@@ -38,94 +37,162 @@ AUTO_TRACK_GLOBAL = PLUGIN + '|804'
 INCLUDE_STARTS_GLOBAL = PLUGIN + '|806'
 NO_SPOILERS_GLOBAL = PLUGIN + '|807'
 INCLUDE_NO_MARKER_GLOBAL = PLUGIN + '|808'
+ALL_LOCATIONS_GLOBAL = PLUGIN + '|80A'
+INCLUDE_QUESTS_GLOBAL = PLUGIN + '|80C'
+INCLUDE_LOCATIONS_GLOBAL = PLUGIN + '|80D'
+INCLUDE_INTERIORS_GLOBAL = PLUGIN + '|80E'
+SKIP_OWNED_LOCKED_GLOBAL = PLUGIN + '|80F'
+SHOW_QUEST_IN_WINDOW_GLOBAL = PLUGIN + '|810'
 
+# id хоткеев те же, что в 1.0: назначенные пользователем клавиши сохраняются.
 HOTKEYS = [
     ('TrackNearestHotkey', 'KEY_TRACK_NEAREST', 'TrackNearest'),
-    ('ShowStartHotkey', 'KEY_SHOW_START', 'ShowNearestStart'),
     ('ExcludeHotkey', 'KEY_EXCLUDE', 'ExcludeCurrent'),
     ('RestoreHotkey', 'KEY_RESTORE', 'RestoreLast'),
+    ('AutoTrackHotkey', 'KEY_AUTO_TRACK', 'ToggleAutoTrack'),
+    ('ShowQuestHotkey', 'KEY_SHOW_QUEST', 'ShowCurrentQuest'),
 ]
+
+# Виды целей для кнопок «Вернуть …» (NQT_MainScript: KindQuest, KindStart, KindLocation, KindInterior).
+KIND_QUEST = 1
+KIND_START = 3
+KIND_LOCATION = 4
+KIND_INTERIOR = 5
 
 STRINGS = {
     'en': {
         'MOD_NAME': 'Nearest Quest Tracker',
-        'ABOUT': 'Press the hotkey to track the quest from your Pip-Boy whose marker is closest to you. '
-                 'Quests in your current world come first, then the Commonwealth, Far Harbor and Nuka-World; '
-                 'within a world, distance follows the route the compass marker takes, through doors.',
+        'ABOUT': 'The hotkey marks the nearest target: a Pip-Boy quest, the start of a new quest, an undiscovered '
+                 'location or an interior you have not been inside, whichever are turned on below. Targets in your current world come first, then the '
+                 'Commonwealth, Far Harbor and Nuka-World.',
         'SEC_KEYS': 'Hotkeys',
-        'KEY_TRACK_NEAREST': 'Track nearest quest',
-        'KEY_TRACK_NEAREST_HELP': 'Tracks the Pip-Boy quest with the closest marker.',
-        'KEY_SHOW_START': 'Show nearest new quest',
-        'KEY_SHOW_START_HELP': 'Puts a marker on the nearest place where a quest you have not started yet begins '
-                               '(a quest giver). The marker goes away once the quest starts.',
-        'KEY_EXCLUDE': 'Exclude tracked quest',
-        'KEY_EXCLUDE_HELP': 'Excludes the tracked quest from the search and tracks the next nearest one. '
-                            'A quest leaves the list when it is completed.',
-        'KEY_RESTORE': 'Restore last excluded quest',
-        'KEY_RESTORE_HELP': 'Takes the last excluded quest back and tracks the nearest quest again.',
-        'SEC_MAIN': 'Settings',
-        'UNTRACK_OTHERS': 'Untrack other quests',
-        'UNTRACK_OTHERS_HELP': 'When on, the hotkey untracks every other quest, so only the nearest one '
-                               'shows on the compass.',
-        'NOTIFICATIONS': 'Notifications',
-        'NOTIFICATIONS_HELP': 'When on, a notification names the quest that is now tracked.',
-        'AUTO_TRACK': 'Automatic',
-        'AUTO_TRACK_HELP': 'When on, the nearest quest is tracked by itself whenever an objective is completed '
-                           'or a new quest starts.',
-        'INCLUDE_STARTS': 'Include quests not started',
-        'INCLUDE_STARTS_HELP': 'When on, "Track nearest quest" also considers quests you have not started yet and '
-                               'marks the start of one if it is closer than any Pip-Boy quest.',
-        'INCLUDE_NO_MARKER': 'Include quests without a marker',
-        'INCLUDE_NO_MARKER_HELP': 'When on, Pip-Boy quests that have no marker (e.g. "find it yourself" quests) are '
-                                  'tracked too, after all quests with a marker in the same world.',
+        'KEY_TRACK_NEAREST': 'Mark nearest',
+        'KEY_TRACK_NEAREST_HELP': 'Marks the nearest target of the kinds picked below. Quest distance follows the route '
+                                  'the compass marker takes, through doors.',
+        'KEY_EXCLUDE': 'Exclude marked',
+        'KEY_EXCLUDE_HELP': 'Excludes the marked quest, location or interior from the search and marks the next nearest '
+                            'one.',
+        'KEY_RESTORE': 'Restore last excluded',
+        'KEY_RESTORE_HELP': 'Takes the last excluded target back and marks the nearest one again.',
+        'KEY_AUTO_TRACK': 'Toggle automatic mode',
+        'KEY_AUTO_TRACK_HELP': 'Turns the "Automatic" setting below on or off; a notification tells which.',
+        'KEY_SHOW_QUEST': 'Show current quest',
+        'KEY_SHOW_QUEST_HELP': 'Shows the name of the tracked quest and its current objectives - what to do now.',
+        'SEC_PICK': 'What to pick',
+        'INCLUDE_QUESTS': 'Pick active quests',
+        'INCLUDE_QUESTS_HELP': 'Quests from your Pip-Boy that have a marker.',
+        'INCLUDE_NO_MARKER': 'Quests without a marker',
+        'INCLUDE_NO_MARKER_HELP': 'With active quests on: also Pip-Boy quests without a marker ("find it yourself"), '
+                                  'after the quests with a marker in the same world.',
+        'INCLUDE_STARTS': 'Pick new quests',
+        'INCLUDE_STARTS_HELP': 'Places where quests you have not started yet begin (quest givers). The marker goes '
+                               'away once the quest starts.',
         'NO_SPOILERS': 'No spoilers',
-        'NO_SPOILERS_HELP': 'When on, the marker of a quest not started yet does not say which quest it is.',
-        'SEC_EXCLUDED': 'Excluded quests',
-        'EXCLUDED_ABOUT': 'This mod never tracks excluded quests. Pick one to take it back.',
-        'RESTORE_PICK': 'Restore quest',
-        'RESTORE_PICK_HELP': 'Pick an excluded quest to take it back into the search.',
+        'NO_SPOILERS_HELP': 'The marker of a new quest does not say which quest it is.',
+        'INCLUDE_LOCATIONS': 'Pick undiscovered locations',
+        'INCLUDE_LOCATIONS_HELP': 'Map locations you have not discovered yet; settlements are skipped. The marker goes '
+                                  'away once you discover the location.',
+        'ALL_LOCATIONS': 'All locations (spoilers)',
+        'ALL_LOCATIONS_HELP': 'Off: only locations on your map, or on your compass. On: any undiscovered location, '
+                              'with its name.',
+        'INCLUDE_INTERIORS': 'Pick interiors',
+        'INCLUDE_INTERIORS_HELP': 'Buildings, basements and caves you have never been inside (the marker is on the door '
+                                  'from outside). Doors that need a key are skipped.',
+        'SKIP_OWNED_LOCKED': 'Skip locked doors of others',
+        'SKIP_OWNED_LOCKED_HELP': 'Interiors behind a locked door that is a crime to pick (red "Pick" prompt) are skipped. '
+                                  "With its key, or in the owner's faction, the door is yours.",
+        'SEC_MAIN': 'Settings',
+        'UNTRACK_OTHERS': 'Only one marker',
+        'UNTRACK_OTHERS_HELP': 'When on, the hotkey removes all other markers: other tracked quests, the new quest '
+                               'marker and the location or interior marker.',
+        'AUTO_TRACK': 'Automatic',
+        'AUTO_TRACK_HELP': 'When on, the nearest target is marked by itself when an objective is completed, a quest '
+                           'starts, or the marked location is discovered or interior entered.',
+        'NOTIFICATIONS': 'Notifications',
+        'NOTIFICATIONS_HELP': 'When on, a notification names the target that is now marked.',
+        'SHOW_QUEST_IN_WINDOW': 'Current quest in a window',
+        'SHOW_QUEST_IN_WINDOW_HELP': 'The "Show current quest" hotkey shows the quest in a message window (the game '
+                                     'pauses until you close it) instead of notifications.',
+        'SEC_EXCLUDED': 'Excluded',
+        'RESTORE_PICK': 'Restore',
+        'RESTORE_PICK_HELP': 'Pick an excluded target to take it back into the search. Completed quests, discovered '
+                             'locations and visited interiors leave the list by themselves.',
         'RESTORE_ALL': 'Restore all',
-        'RESTORE_ALL_HELP': 'Empties the list of excluded quests.',
+        'RESTORE_ALL_HELP': 'Empties the list of excluded targets.',
+        'RESTORE_QUESTS': 'Restore active quests',
+        'RESTORE_QUESTS_HELP': 'Takes back all excluded Pip-Boy quests.',
+        'RESTORE_STARTS': 'Restore new quests',
+        'RESTORE_STARTS_HELP': 'Takes back all excluded quests not started yet.',
+        'RESTORE_LOCATIONS': 'Restore locations',
+        'RESTORE_LOCATIONS_HELP': 'Takes back all excluded locations.',
+        'RESTORE_INTERIORS': 'Restore interiors',
+        'RESTORE_INTERIORS_HELP': 'Takes back all excluded interiors.',
     },
     'ru': {
         'MOD_NAME': 'Nearest Quest Tracker',
-        'ABOUT': 'Нажмите хоткей, чтобы отметить квест из Pip-Boy, маркер которого ближе всего к вам. '
-                 'Сначала квесты мира, где вы сейчас, потом Содружества, Фар-Харбора и Ядер-Мира; внутри мира '
-                 'расстояние считается по маршруту маркера компаса, через двери.',
+        'ABOUT': 'Хоткей отмечает ближайшую цель: квест из Pip-Boy, начало нового квеста, неоткрытую локацию или '
+                 'интерьер, где вы не были, — что включено ниже. Сначала цели мира, где вы сейчас, потом Содружества, Фар-Харбора и Ядер-Мира.',
         'SEC_KEYS': 'Хоткеи',
-        'KEY_TRACK_NEAREST': 'Отметить ближайший квест',
-        'KEY_TRACK_NEAREST_HELP': 'Отмечает квест из Pip-Boy с ближайшим маркером.',
-        'KEY_SHOW_START': 'Показать ближайший новый квест',
-        'KEY_SHOW_START_HELP': 'Ставит маркер на ближайшее место, где начинается ещё не начатый квест '
-                               '(квестодатель). Маркер пропадает, когда квест начат.',
-        'KEY_EXCLUDE': 'Исключить отмеченный квест',
-        'KEY_EXCLUDE_HELP': 'Исключает отмеченный квест из поиска и отмечает следующий ближайший. '
-                            'Выполненный квест сам уходит из списка.',
-        'KEY_RESTORE': 'Вернуть последний исключённый',
-        'KEY_RESTORE_HELP': 'Возвращает последний исключённый квест и снова отмечает ближайший.',
-        'SEC_MAIN': 'Настройки',
-        'UNTRACK_OTHERS': 'Снимать отметку с остальных',
-        'UNTRACK_OTHERS_HELP': 'Если включено, хоткей снимает отметку со всех остальных квестов, и на компасе '
-                               'остаётся только ближайший.',
-        'NOTIFICATIONS': 'Уведомления',
-        'NOTIFICATIONS_HELP': 'Если включено, уведомление называет квест, который теперь отмечен.',
-        'AUTO_TRACK': 'Автоматически',
-        'AUTO_TRACK_HELP': 'Если включено, ближайший квест отмечается сам, когда выполнена цель или начат '
-                           'новый квест.',
-        'INCLUDE_STARTS': 'Учитывать не начатые квесты',
-        'INCLUDE_STARTS_HELP': 'Если включено, «Отметить ближайший квест» учитывает и ещё не начатые квесты и '
-                               'отмечает начало такого квеста, если оно ближе квестов из Pip-Boy.',
-        'INCLUDE_NO_MARKER': 'Учитывать квесты без маркера',
-        'INCLUDE_NO_MARKER_HELP': 'Если включено, отмечаются и квесты Pip-Boy без маркера (например, «найди сам») — '
-                                  'после всех квестов с маркером в том же мире.',
+        'KEY_TRACK_NEAREST': 'Отметить ближайшее',
+        'KEY_TRACK_NEAREST_HELP': 'Отмечает ближайшую цель из выбранных ниже. Расстояние до квеста — по маршруту '
+                                  'маркера компаса, через двери.',
+        'KEY_EXCLUDE': 'Исключить отмеченное',
+        'KEY_EXCLUDE_HELP': 'Исключает отмеченный квест, локацию или интерьер из поиска и отмечает следующее '
+                            'ближайшее.',
+        'KEY_RESTORE': 'Вернуть последнее исключённое',
+        'KEY_RESTORE_HELP': 'Возвращает последнее исключённое и снова отмечает ближайшее.',
+        'KEY_AUTO_TRACK': 'Вкл/выкл автоматический режим',
+        'KEY_AUTO_TRACK_HELP': 'Включает или выключает настройку «Автоматически» ниже; уведомление сообщает, что стало.',
+        'KEY_SHOW_QUEST': 'Показать текущий квест',
+        'KEY_SHOW_QUEST_HELP': 'Показывает название отслеживаемого квеста и его текущие цели — что нужно сделать.',
+        'SEC_PICK': 'Что выбирать',
+        'INCLUDE_QUESTS': 'Выбирать активные квесты',
+        'INCLUDE_QUESTS_HELP': 'Квесты из Pip-Boy, у которых есть маркер.',
+        'INCLUDE_NO_MARKER': 'Квесты без маркера',
+        'INCLUDE_NO_MARKER_HELP': 'Если включены активные квесты: и квесты Pip-Boy без маркера («найди сам») — после '
+                                  'квестов с маркером в том же мире.',
+        'INCLUDE_STARTS': 'Выбирать новые квесты',
+        'INCLUDE_STARTS_HELP': 'Места, где начинаются ещё не начатые квесты (квестодатели). Маркер пропадает, когда '
+                               'квест начат.',
         'NO_SPOILERS': 'Без спойлеров',
-        'NO_SPOILERS_HELP': 'Если включено, маркер не начатого квеста не называет, что это за квест.',
-        'SEC_EXCLUDED': 'Исключённые квесты',
-        'EXCLUDED_ABOUT': 'Исключённые квесты мод никогда не отмечает. Выберите квест, чтобы вернуть его.',
-        'RESTORE_PICK': 'Вернуть квест',
-        'RESTORE_PICK_HELP': 'Выберите исключённый квест, чтобы вернуть его в поиск.',
-        'RESTORE_ALL': 'Вернуть все',
-        'RESTORE_ALL_HELP': 'Очищает список исключённых квестов.',
+        'NO_SPOILERS_HELP': 'Маркер нового квеста не называет, что это за квест.',
+        'INCLUDE_LOCATIONS': 'Выбирать неоткрытые локации',
+        'INCLUDE_LOCATIONS_HELP': 'Локации карты, которые вы ещё не открыли; поселения пропускаются. Маркер пропадает, '
+                                  'когда локация открыта.',
+        'ALL_LOCATIONS': 'Все локации (спойлеры)',
+        'ALL_LOCATIONS_HELP': 'Выключено: только локации на вашей карте или на компасе. Включено: любые неоткрытые, '
+                              'с названием.',
+        'INCLUDE_INTERIORS': 'Выбирать интерьеры',
+        'INCLUDE_INTERIORS_HELP': 'Здания, подвалы и пещеры, где вы ещё не были внутри (маркер — на двери снаружи). '
+                                  'Двери, которым нужен ключ, пропускаются.',
+        'SKIP_OWNED_LOCKED': 'Пропускать чужие запертые',
+        'SKIP_OWNED_LOCKED_HELP': 'Пропускать интерьеры за запертой дверью, взлом которой — преступление (красное «Взломать»). С ключом или во фракции владельца дверь ваша.',
+        'SEC_MAIN': 'Настройки',
+        'UNTRACK_OTHERS': 'Только один маркер',
+        'UNTRACK_OTHERS_HELP': 'Если включено, хоткей убирает все остальные маркеры: другие отмеченные квесты, маркер '
+                               'нового квеста и маркер локации или интерьера.',
+        'AUTO_TRACK': 'Автоматически',
+        'AUTO_TRACK_HELP': 'Если включено, ближайшая цель отмечается сама, когда выполнена цель, начат квест или '
+                           'открыта отмеченная локация или вы вошли в отмеченный интерьер.',
+        'NOTIFICATIONS': 'Уведомления',
+        'NOTIFICATIONS_HELP': 'Если включено, уведомление называет цель, которая теперь отмечена.',
+        'SHOW_QUEST_IN_WINDOW': 'Текущий квест — в окне',
+        'SHOW_QUEST_IN_WINDOW_HELP': 'Хоткей «Показать текущий квест» показывает квест в окне сообщения (игра на паузе, '
+                                     'пока окно не закрыто), а не уведомлениями.',
+        'SEC_EXCLUDED': 'Исключённое',
+        'RESTORE_PICK': 'Вернуть',
+        'RESTORE_PICK_HELP': 'Выберите исключённое, чтобы вернуть в поиск. Выполненные квесты, открытые локации и '
+                             'посещённые интерьеры уходят из списка сами.',
+        'RESTORE_ALL': 'Вернуть всё',
+        'RESTORE_ALL_HELP': 'Очищает список исключённого.',
+        'RESTORE_QUESTS': 'Вернуть активные квесты',
+        'RESTORE_QUESTS_HELP': 'Возвращает все исключённые квесты из Pip-Boy.',
+        'RESTORE_STARTS': 'Вернуть новые квесты',
+        'RESTORE_STARTS_HELP': 'Возвращает все исключённые не начатые квесты.',
+        'RESTORE_LOCATIONS': 'Вернуть локации',
+        'RESTORE_LOCATIONS_HELP': 'Возвращает все исключённые локации.',
+        'RESTORE_INTERIORS': 'Вернуть интерьеры',
+        'RESTORE_INTERIORS_HELP': 'Возвращает все исключённые интерьеры.',
     },
 }
 
@@ -146,6 +213,10 @@ def global_switcher(key, form, action=None):
     return control
 
 
+def button(key, function, params=()):
+    return {'type': 'button', 'text': t(key), 'help': t(key + '_HELP'), 'action': call(function, params)}
+
+
 def config():
     content = [
         {'type': 'text', 'text': t('ABOUT')},
@@ -156,22 +227,33 @@ def config():
         content.append({'id': hid, 'type': 'hotkey', 'text': t(key), 'help': t(key + '_HELP')})
     content += [
         {'type': 'spacer'},
+        {'type': 'section', 'text': t('SEC_PICK')},
+        global_switcher('INCLUDE_QUESTS', INCLUDE_QUESTS_GLOBAL),
+        global_switcher('INCLUDE_NO_MARKER', INCLUDE_NO_MARKER_GLOBAL),
+        global_switcher('INCLUDE_STARTS', INCLUDE_STARTS_GLOBAL),
+        global_switcher('NO_SPOILERS', NO_SPOILERS_GLOBAL, 'OnNoSpoilersChanged'),
+        global_switcher('INCLUDE_LOCATIONS', INCLUDE_LOCATIONS_GLOBAL),
+        global_switcher('ALL_LOCATIONS', ALL_LOCATIONS_GLOBAL),
+        global_switcher('INCLUDE_INTERIORS', INCLUDE_INTERIORS_GLOBAL),
+        global_switcher('SKIP_OWNED_LOCKED', SKIP_OWNED_LOCKED_GLOBAL),
+        {'type': 'spacer'},
         {'type': 'section', 'text': t('SEC_MAIN')},
         global_switcher('UNTRACK_OTHERS', UNTRACK_OTHERS_GLOBAL),
-        global_switcher('NOTIFICATIONS', NOTIFICATIONS_GLOBAL),
         global_switcher('AUTO_TRACK', AUTO_TRACK_GLOBAL, 'OnAutoTrackChanged'),
-        global_switcher('INCLUDE_STARTS', INCLUDE_STARTS_GLOBAL),
-        global_switcher('INCLUDE_NO_MARKER', INCLUDE_NO_MARKER_GLOBAL),
-        global_switcher('NO_SPOILERS', NO_SPOILERS_GLOBAL, 'OnNoSpoilersChanged'),
+        global_switcher('NOTIFICATIONS', NOTIFICATIONS_GLOBAL),
+        global_switcher('SHOW_QUEST_IN_WINDOW', SHOW_QUEST_IN_WINDOW_GLOBAL),
         {'type': 'spacer'},
         {'type': 'section', 'text': t('SEC_EXCLUDED')},
-        {'type': 'text', 'text': t('EXCLUDED_ABOUT')},
         {'type': 'dropdown', 'text': t('RESTORE_PICK'), 'help': t('RESTORE_PICK_HELP'),
          'valueOptions': {'sourceType': 'PropertyValueInt', 'sourceForm': QUEST, 'scriptName': SCRIPT,
                           'propertyName': 'MCMRestoreChoice',
                           'listFromProperty': {'form': QUEST, 'scriptName': SCRIPT, 'propertyName': 'ExcludedNames'}},
          'action': call('RestoreFromMenu', ['{value}'])},
-        {'type': 'button', 'text': t('RESTORE_ALL'), 'help': t('RESTORE_ALL_HELP'), 'action': call('RestoreAll')},
+        button('RESTORE_ALL', 'RestoreAll'),
+        button('RESTORE_QUESTS', 'RestoreKind', [KIND_QUEST]),
+        button('RESTORE_STARTS', 'RestoreKind', [KIND_START]),
+        button('RESTORE_LOCATIONS', 'RestoreKind', [KIND_LOCATION]),
+        button('RESTORE_INTERIORS', 'RestoreKind', [KIND_INTERIOR]),
     ]
     return {
         'modName': MOD,
@@ -185,7 +267,6 @@ def config():
 def keybinds():
     return {'modName': MOD, 'keybinds': [
         {'id': hid, 'desc': t(key), 'action': call(function)} for hid, key, function in HOTKEYS]}
-
 
 def write_json(path, data):
     os.makedirs(os.path.dirname(path), exist_ok=True)

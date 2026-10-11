@@ -8,6 +8,10 @@ namespace NQT
 	// quest's nearest target. Empty if the quest has no displayed objective.
 	[[nodiscard]] std::string GetQuestDisplayName(const RE::TESQuest& a_quest);
 
+	// Texts of the quest's displayed (not completed) objectives as the Pip-Boy shows them, aliases
+	// resolved, in the order the engine keeps them; repeated texts once.
+	[[nodiscard]] std::vector<std::string> GetObjectiveTexts(const RE::TESQuest& a_quest);
+
 	// sLanguage from the game INI ("en", "ru", ...), lower case; "en" if it is not set.
 	[[nodiscard]] std::string GetGameLanguage();
 }

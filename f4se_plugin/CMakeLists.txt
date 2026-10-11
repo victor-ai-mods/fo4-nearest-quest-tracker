@@ -28,8 +28,11 @@ configure_file(
 add_library(
 	"${PROJECT_NAME}"
 	SHARED
+	src/Interiors.cpp
 	src/main.cpp
+	src/MapMarkers.cpp
 	src/Papyrus.cpp
+	src/QuestCategories.cpp
 	src/QuestDistance.cpp
 	src/QuestStarts.cpp
 	src/QuestText.cpp

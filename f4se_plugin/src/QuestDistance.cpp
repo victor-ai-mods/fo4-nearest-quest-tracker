@@ -1,13 +1,20 @@
 #include "QuestDistance.h"
 
 #include "EngineTypes.h"
+#include "MapMarkers.h"
 #include "QuestStarts.h"
 
 namespace NQT
 {
 	namespace
 	{
-		const RE::TESQuest* markerQuest{ nullptr };
+		// NearestQuestTracker.esp's own marker quests (start marker, location marker): never candidates.
+		std::array<const RE::TESQuest*, 2> markerQuests{};
+
+		bool IsMarkerQuest(const RE::TESQuest* a_quest) noexcept
+		{
+			return std::ranges::find(markerQuests, a_quest) != markerQuests.end();
+		}
 
 		float Length(const RE::NiPoint3& a_from, const RE::NiPoint3& a_to) noexcept
 		{
@@ -68,7 +75,7 @@ namespace NQT
 			std::vector<RE::TESQuest*> result;
 			for (const auto& instance : a_player.objectives) {
 				const auto objective = Engine::AsObjective(instance.objective);
-				if (!objective || !objective->ownerQuest || objective->ownerQuest == markerQuest || !Engine::IsQuestTrackable(*objective->ownerQuest) ||
+				if (!objective || !objective->ownerQuest || IsMarkerQuest(objective->ownerQuest) || !Engine::IsQuestTrackable(*objective->ownerQuest) ||
 					instance.enstanceState.underlying() != std::to_underlying(Engine::ObjectiveState::kDisplayed)) {
 					continue;
 				}
@@ -94,6 +101,88 @@ namespace NQT
 			return (a_cell.formFlags >> 10) & 1;
 		}
 
+		// The door a load door leads to (ExtraTeleport); null if none.
+		RE::NiPointer<RE::TESObjectREFR> LinkedDoor(const RE::TESObjectREFR* a_door)
+		{
+			const auto extra = a_door && a_door->extraList ? a_door->extraList->GetByType(RE::EXTRA_DATA_TYPE::kTeleport) : nullptr;
+			const auto data = extra ? static_cast<const RE::ExtraTeleport*>(extra)->teleportData : nullptr;
+			return data ? data->linkedDoor.get() : nullptr;
+		}
+
+		// A door from a worldspace into an interior: the world side and the interior side.
+		struct WorldDoor
+		{
+			RE::TESObjectREFR* outside;
+			RE::TESObjectREFR* inside;
+		};
+
+		// Interior cell -> its doors straight out into a worldspace, collected once from the persistent cells of
+		// all worldspaces (load doors are persistent; all 522 doors into interiors are found there, 2026-10-04 dump).
+		const std::unordered_map<const RE::TESObjectCELL*, std::vector<WorldDoor>>& WorldDoorsByInterior()
+		{
+			static const auto doors = [] {
+				std::unordered_map<const RE::TESObjectCELL*, std::vector<WorldDoor>> result;
+				const auto dataHandler = RE::TESDataHandler::GetSingleton();
+				if (!dataHandler) {
+					return result;
+				}
+				for (const auto world : dataHandler->GetFormArray<RE::TESWorldSpace>()) {
+					const auto cell = world ? world->persistentCell : nullptr;
+					if (!cell) {
+						continue;
+					}
+					RE::BSAutoLock lock{ cell->spinLock };  // TESObjectCELL::CellRefLockEnter (OG rva 3C4720)
+					for (const auto& ref : cell->references) {
+						const auto inside = ref ? LinkedDoor(ref.get()) : nullptr;
+						const auto interior = inside ? CellOf(*inside) : nullptr;
+						if (interior && interior->IsInterior()) {
+							result[interior].push_back({ ref.get(), inside.get() });
+						}
+					}
+				}
+				return result;
+			}();
+			return doors;
+		}
+
+		// For a ref in an interior with a door straight out into a worldspace: the outside door of the nearest
+		// such door (2026-10-06 log: an interior measured by its location's world marker put all Diamond City
+		// houses at the city gate, so from inside one house every other was 0 units away).
+		RE::TESObjectREFR* WorldDoorOf(const RE::TESObjectCELL& a_interior, const RE::NiPoint3& a_pos)
+		{
+			const auto& doors = WorldDoorsByInterior();
+			const auto  it = doors.find(&a_interior);
+			if (it == doors.end()) {
+				return nullptr;
+			}
+			RE::TESObjectREFR* best = nullptr;
+			float              bestLength = 0.0f;
+			for (const auto& door : it->second) {
+				if (door.outside->IsDisabled()) {
+					continue;
+				}
+				const auto length = Length(a_pos, door.inside->GetPosition());
+				if (!best || length < bestLength) {
+					best = door.outside;
+					bestLength = length;
+				}
+			}
+			return best;
+		}
+
+		std::optional<RootPoint> ExteriorRoot(const RE::TESObjectREFR& a_ref, const RE::TESObjectCELL& a_cell)
+		{
+			const auto world = WorldOfCell(&a_cell);
+			return world ? std::optional{ ToRoot(world, a_ref.GetPosition()) } : std::nullopt;
+		}
+
+		std::optional<RootPoint> WorldDoorRootIn(const RE::TESObjectREFR& a_ref, const RE::TESObjectCELL& a_interior)
+		{
+			const auto door = WorldDoorOf(a_interior, a_ref.GetPosition());
+			const auto doorCell = door ? CellOf(*door) : nullptr;
+			return doorCell && !doorCell->IsInterior() ? ExteriorRoot(*door, *doorCell) : std::nullopt;
+		}
+
 		std::optional<RootPoint> RootOfImpl(const RE::TESObjectREFR& a_ref, int a_depth)
 		{
 			const auto cell = CellOf(a_ref);
@@ -101,8 +190,10 @@ namespace NQT
 				return std::nullopt;
 			}
 			if (!cell->IsInterior()) {
-				const auto world = WorldOfCell(cell);
-				return world ? std::optional{ RootPoint{ RootWorld(world), a_ref.GetPosition() } } : std::nullopt;
+				return ExteriorRoot(a_ref, *cell);
+			}
+			if (auto point = WorldDoorRootIn(a_ref, *cell)) {
+				return point;
 			}
 			if (a_depth > 2) {
 				return std::nullopt;
@@ -148,33 +239,11 @@ namespace NQT
 			return worlds;
 		}
 
-		// Track order of a world: the player's world, the Commonwealth, Far Harbor, Nuka-World, others, unknown.
-		int WorldRank(const RE::TESWorldSpace* a_world, const RE::TESWorldSpace* a_playerWorld)
-		{
-			if (!a_world) {
-				return 5;
-			}
-			if (a_world == a_playerWorld) {
-				return 0;
-			}
-			const auto& main = MainWorlds();
-			const auto  it = std::ranges::find(main, a_world);
-			return it != main.end() ? static_cast<int>(it - main.begin()) + 1 : 4;
-		}
-
 		// Root world of an exterior ref; null for an interior or a ref without a cell.
 		const RE::TESWorldSpace* ExteriorWorld(const RE::TESObjectREFR* a_ref)
 		{
 			const auto world = a_ref ? WorldOfCell(CellOf(*a_ref)) : nullptr;
 			return world ? RootWorld(world) : nullptr;
-		}
-
-		// The door a load door leads to (ExtraTeleport); null if none.
-		RE::NiPointer<RE::TESObjectREFR> LinkedDoor(const RE::TESObjectREFR* a_door)
-		{
-			const auto extra = a_door && a_door->extraList ? a_door->extraList->GetByType(RE::EXTRA_DATA_TYPE::kTeleport) : nullptr;
-			const auto data = extra ? static_cast<const RE::ExtraTeleport*>(extra)->teleportData : nullptr;
-			return data ? data->linkedDoor.get() : nullptr;
 		}
 
 		// World of the nearest target of a Pip-Boy quest: where the target is on the map; else the last
@@ -295,26 +364,50 @@ namespace NQT
 		}
 	}
 
-	void SetMarkerQuest(const RE::TESQuest* a_quest) noexcept
+	void SetMarkerQuests(const RE::TESQuest* a_startQuest, const RE::TESQuest* a_locationQuest) noexcept
 	{
-		markerQuest = a_quest;
+		markerQuests = { a_startQuest, a_locationQuest };
 	}
 
 	const RE::TESWorldSpace* RootWorld(const RE::TESWorldSpace* a_world)
+	{
+		return ToRoot(a_world, RE::NiPoint3{}).world;
+	}
+
+	RootPoint ToRoot(const RE::TESWorldSpace* a_world, RE::NiPoint3 a_pos)
 	{
 		using Flag = RE::TESWorldSpace::PARENT_USE_FLAG;
 		for (int depth = 0; a_world && a_world->parentWorld && depth < 8; ++depth) {
 			if (!a_world->parentUseFlags.any(Flag::kLand, Flag::kLOD, Flag::kMap)) {
 				break;
 			}
+			// TESWorldSpace::AdjustMapMarkerCoord(pos, false) (OG rva 4936D0): scale around the middle of the
+			// world's bounds unless the scale is 1 (or 0), then add the offset (WRLD ONAM).
+			const auto& offset = a_world->worldMapOffsetData;
+			if (offset.mapScale != 1.0f && offset.mapScale != 0.0f) {
+				const auto centerX = (a_world->minimumCoords.x + a_world->maximumCoords.x) * 0.5f;
+				const auto centerY = (a_world->minimumCoords.y + a_world->maximumCoords.y) * 0.5f;
+				a_pos.x = (a_pos.x - centerX) * offset.mapScale + centerX;
+				a_pos.y = (a_pos.y - centerY) * offset.mapScale + centerY;
+				a_pos.z *= offset.mapScale;
+			}
+			a_pos.x += offset.mapOffsetX;
+			a_pos.y += offset.mapOffsetY;
+			a_pos.z += offset.mapOffsetZ;
 			a_world = a_world->parentWorld;
 		}
-		return a_world;
+		return RootPoint{ a_world, a_pos };
 	}
 
 	std::optional<RootPoint> RootOf(const RE::TESObjectREFR& a_ref)
 	{
 		return RootOfImpl(a_ref, 0);
+	}
+
+	std::optional<RootPoint> WorldDoorRoot(const RE::TESObjectREFR& a_ref)
+	{
+		const auto cell = CellOf(a_ref);
+		return cell && cell->IsInterior() ? WorldDoorRootIn(a_ref, *cell) : std::nullopt;
 	}
 
 	std::optional<RootPoint> PlayerRoot(const RE::PlayerCharacter& a_player)
@@ -323,9 +416,22 @@ namespace NQT
 			return point;
 		}
 		if (a_player.cachedWorldspace) {
-			return RootPoint{ RootWorld(a_player.cachedWorldspace), a_player.exteriorPosition };
+			return ToRoot(a_player.cachedWorldspace, a_player.exteriorPosition);
 		}
 		return std::nullopt;
+	}
+
+	int WorldRank(const RE::TESWorldSpace* a_world, const RE::TESWorldSpace* a_playerWorld)
+	{
+		if (!a_world) {
+			return 5;
+		}
+		if (a_world == a_playerWorld) {
+			return 0;
+		}
+		const auto& main = MainWorlds();
+		const auto  it = std::ranges::find(main, a_world);
+		return it != main.end() ? static_cast<int>(it - main.begin()) + 1 : 4;
 	}
 
 	const RE::TESWorldSpace* PluginWorld(const RE::TESQuest& a_quest)
@@ -380,6 +486,23 @@ namespace NQT
 		return Distance{ Length(a_from.GetPosition(), a_to.GetPosition()), DistanceKind::kStraight };
 	}
 
+	Distance MeasureBetween(const std::optional<RootPoint>& a_from, const RootPoint& a_to, std::span<const WorldEntry> a_entries)
+	{
+		if (a_from && a_to.world && a_from->world == a_to.world) {
+			return Distance{ Length(a_from->pos, a_to.pos), DistanceKind::kStraight };
+		}
+		std::optional<float> best;
+		for (const auto& entry : a_entries) {
+			if (a_to.world && RootWorld(entry.world) == a_to.world) {
+				const auto length = entry.length + Length(entry.point, a_to.pos);
+				if (!best || length < *best) {
+					best = length;
+				}
+			}
+		}
+		return best ? Distance{ *best, DistanceKind::kViaDoors } : Distance{ 0.0f, DistanceKind::kOtherSpace };
+	}
+
 	std::vector<RE::TESQuest*> GetDisplayedQuests()
 	{
 		const auto player = RE::PlayerCharacter::GetSingleton();
@@ -417,7 +540,7 @@ namespace NQT
 		std::uint32_t  sum = 0;
 		for (const auto& instance : player->objectives) {
 			const auto objective = Engine::AsObjective(instance.objective);
-			if (!objective || !objective->ownerQuest || objective->ownerQuest == markerQuest || !Engine::IsQuestTrackable(*objective->ownerQuest) ||
+			if (!objective || !objective->ownerQuest || IsMarkerQuest(objective->ownerQuest) || !Engine::IsQuestTrackable(*objective->ownerQuest) ||
 				instance.enstanceState.underlying() != std::to_underlying(Engine::ObjectiveState::kDisplayed)) {
 				continue;
 			}
@@ -463,7 +586,7 @@ namespace NQT
 					// A hop comes out where the next door stands (the last one: where the target is).
 					const RE::TESObjectREFR* next = i + 1 < path.doors.size() ? path.doors[i + 1].door : target.get();
 					if (const auto world = next ? WorldOfCell(CellOf(*next)) : nullptr) {
-						result.push_back(WorldEntry{ world, total, hop.exitPoint });
+						result.push_back(WorldEntry{ world, total, ToRoot(world, hop.exitPoint).pos });
 					}
 				}
 			});
@@ -493,7 +616,7 @@ namespace NQT
 			ForEachRefData(*Engine::AsTargetArray(entry.second), [&](const Engine::QuestTarget& a_target, const Engine::QuestTargetRefData& a_ref) {
 				const auto distance = MeasureRefData(*player, a_ref);
 				if (distance && (!best || distance->SortKey() < best->distance.SortKey())) {
-					best = Candidate{ quest, &a_target, a_ref.target, *distance };
+					best = Candidate{ .quest = quest, .questTarget = &a_target, .target = a_ref.target, .distance = *distance };
 					bestRef = &a_ref;
 				}
 			});
@@ -525,7 +648,7 @@ namespace NQT
 		return result;
 	}
 
-	const Candidate* FindNearest(std::span<const Candidate> a_candidates, const std::function<bool(const RE::TESQuest&)>& a_isExcluded)
+	const Candidate* FindNearest(std::span<const Candidate> a_candidates, const std::function<bool(const Candidate&)>& a_isExcluded)
 	{
 		const auto player = RE::PlayerCharacter::GetSingleton();
 		const auto playerRoot = player ? PlayerRoot(*player) : std::nullopt;
@@ -538,9 +661,8 @@ namespace NQT
 		logger::debug("  player world {:08X}"sv, playerWorld ? playerWorld->GetFormID() : 0u);
 		const Candidate* best = nullptr;
 		for (const auto& candidate : a_candidates) {
-			const bool excluded = a_isExcluded(*candidate.quest);
-			logger::debug("  {} {}: world {:08X} (rank {}), {}{}"sv,
-				candidate.start ? "start"sv : (candidate.noMarker ? "no-marker"sv : "quest"sv), DescribeQuest(*candidate.quest),
+			const bool excluded = a_isExcluded(candidate);
+			logger::debug("  {}: world {:08X} (rank {}), {}{}"sv, DescribeCandidate(candidate),
 				candidate.world ? candidate.world->GetFormID() : 0u, WorldRank(candidate.world, playerWorld),
 				candidate.noMarker ? "-"s : std::format("{} {:.0f}"sv, KindName(candidate.distance.kind), candidate.distance.value),
 				excluded ? " (excluded)"sv : ""sv);
@@ -549,6 +671,23 @@ namespace NQT
 			}
 		}
 		return best;
+	}
+
+	std::string DescribeCandidate(const Candidate& a_candidate)
+	{
+		if (a_candidate.interior) {
+			const auto name = a_candidate.interior->GetFullName();
+			return std::format("interior {:08X} \"{}\" door {:08X}"sv, a_candidate.interior->GetFormID(), name ? name : "",
+				a_candidate.location ? a_candidate.location->GetFormID() : 0u);
+		}
+		if (a_candidate.location) {
+			return std::format("location {:08X} \"{}\""sv, a_candidate.location->GetFormID(), GetMapMarkerName(*a_candidate.location));
+		}
+		if (!a_candidate.quest) {
+			return "?"s;
+		}
+		return std::format("{} {}"sv, a_candidate.start ? "start"sv : (a_candidate.noMarker ? "no-marker"sv : "quest"sv),
+			DescribeQuest(*a_candidate.quest));
 	}
 
 	std::string DescribeQuest(const RE::TESQuest& a_quest)

@@ -100,6 +100,20 @@ namespace NQT
 		return name;
 	}
 
+	std::vector<std::string> GetObjectiveTexts(const RE::TESQuest& a_quest)
+	{
+		ShownObjective           owner;
+		std::vector<std::string> result;
+		for (const auto& shown : DisplayedObjectives(a_quest, nullptr, owner)) {
+			auto text = ParseText(LocalizedText(shown.objective->displayText), a_quest, shown.instanceID);
+			if (!text.empty() && std::ranges::find(result, text) == result.end()) {
+				result.push_back(std::move(text));
+			}
+		}
+		logger::debug("objective texts of {}: {}"sv, DescribeQuest(a_quest), result.size());
+		return result;
+	}
+
 	std::string GetGameLanguage()
 	{
 		// sLanguage:General is a static SettingT<INISettingCollection> (OG id 1527977) registered

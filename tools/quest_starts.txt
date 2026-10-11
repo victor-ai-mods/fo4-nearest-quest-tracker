@@ -101,7 +101,9 @@ DN083_Barney            DN083_BarneySniperPosition                # Gun Run (Л�
 
 # --- Содружество: Даймонд-сити и Добрососедство ---
 MS07a                   Fallout4.esm|0222A4  after=MQ104          # The Disappearing Act — Элли Перкинс / дело на столе в агентстве
-MS07b                   Fallout4.esm|0222A4  after=MQ104          # The Gilded Grasshopper — голозапись Марти Буллфинча в агентстве
+# MS07b (The Gilded Grasshopper) — без точки старта: его ведёт Pip-Boy-цель MS07 «Расследование» (стадия 50 после
+# MS07a -> цель 60 «ознакомиться с делами» -> коробка дел 147D54 -> голозапись Буллфинча 147D55 -> MS07b стадия 10).
+# Элли его не даёт (2026-10-06: маркер на Элли, она говорила только общие фразы).
 FFDiamondCity02         GenevaREF                                 # Home Plate (Основная база) — Женева, мэрия
 FFDiamondCity11         DocCrockerREF                             # A New You (Новый облик) — Док Крокер
 FFDiamondCity10         Fallout4.esm|0199D5  after=InstKickOut|MQ302BoS|MQ302Min|MQ302RR|BoS304   # In Sheep's Clothing — Дэнни Салливан

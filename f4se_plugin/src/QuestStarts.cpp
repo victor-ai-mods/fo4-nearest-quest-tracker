@@ -6,38 +6,38 @@
 
 namespace NQT
 {
+	// "Plugin.esp|ID" -> loaded FormID; the ID as xEdit shows it (with or without the load
+	// order byte, FExxxxxx for ESL). 0 if the plugin is not loaded or the text is malformed.
+	// Works for refs that are not in memory: a temporary ref keeps its file FormID.
+	std::uint32_t ResolveID(std::string_view a_key)
+	{
+		const auto bar = a_key.find('|');
+		if (bar == std::string_view::npos) {
+			return 0;
+		}
+		const auto    plugin = a_key.substr(0, bar);
+		const auto    hex = a_key.substr(bar + 1);
+		std::uint32_t raw = 0;
+		if (hex.empty() || std::from_chars(hex.data(), hex.data() + hex.size(), raw, 16).ec != std::errc{}) {
+			return 0;
+		}
+		const auto dataHandler = RE::TESDataHandler::GetSingleton();
+		if (!dataHandler) {
+			return 0;
+		}
+		const auto [file, full] = dataHandler->LookupLoadedFile(plugin);
+		if (!file) {
+			return 0;
+		}
+		return full ? (std::uint32_t{ file->compileIndex } << 24) | (raw & 0xFFFFFF) :
+		              0xFE000000 | (std::uint32_t{ file->smallFileCompileIndex } << 12) | (raw & 0xFFF);
+	}
+
 	namespace
 	{
 		constexpr auto kDataDir = "Data/F4SE/Plugins/NearestQuestTracker"sv;
 
 		std::vector<QuestStart> starts;
-
-		// "Plugin.esp|ID" -> loaded FormID; the ID as xEdit shows it (with or without the load
-		// order byte, FExxxxxx for ESL). 0 if the plugin is not loaded or the text is malformed.
-		// Works for refs that are not in memory: a temporary ref keeps its file FormID.
-		std::uint32_t ResolveID(std::string_view a_key)
-		{
-			const auto bar = a_key.find('|');
-			if (bar == std::string_view::npos) {
-				return 0;
-			}
-			const auto    plugin = a_key.substr(0, bar);
-			const auto    hex = a_key.substr(bar + 1);
-			std::uint32_t raw = 0;
-			if (hex.empty() || std::from_chars(hex.data(), hex.data() + hex.size(), raw, 16).ec != std::errc{}) {
-				return 0;
-			}
-			const auto dataHandler = RE::TESDataHandler::GetSingleton();
-			if (!dataHandler) {
-				return 0;
-			}
-			const auto [file, full] = dataHandler->LookupLoadedFile(plugin);
-			if (!file) {
-				return 0;
-			}
-			return full ? (std::uint32_t{ file->compileIndex } << 24) | (raw & 0xFFFFFF) :
-			              0xFE000000 | (std::uint32_t{ file->smallFileCompileIndex } << 12) | (raw & 0xFFF);
-		}
 
 		RE::TESQuest* ResolveQuest(const nlohmann::json& a_value)
 		{
@@ -244,25 +244,6 @@ namespace NQT
 			return state;
 		}
 
-		// Straight line in the same root world; else the best way in through a door (WorldEntry): path length
-		// to the door + straight line from where it comes out; else kOtherSpace.
-		Distance Between(const std::optional<RootPoint>& a_from, const RootPoint& a_to, std::span<const WorldEntry> a_entries)
-		{
-			if (a_from && a_to.world && a_from->world == a_to.world) {
-				return Distance{ a_from->pos.GetDistance(a_to.pos), DistanceKind::kStraight };
-			}
-			std::optional<float> best;
-			for (const auto& entry : a_entries) {
-				if (a_to.world && RootWorld(entry.world) == a_to.world) {
-					const auto length = entry.length + entry.point.GetDistance(a_to.pos);
-					if (!best || length < *best) {
-						best = length;
-					}
-				}
-			}
-			return best ? Distance{ *best, DistanceKind::kViaDoors } : Distance{ 0.0f, DistanceKind::kOtherSpace };
-		}
-
 		std::optional<Distance> MeasureToRef(const RE::PlayerCharacter& a_player, const std::optional<RootPoint>& a_playerRoot,
 			std::span<const WorldEntry> a_entries, const QuestStart& a_start, const RE::TESObjectREFR* a_live)
 		{
@@ -271,11 +252,18 @@ namespace NQT
 					return straight;
 				}
 				if (const auto root = RootOf(*a_live)) {
-					return Between(a_playerRoot, *root, a_entries);
+					return MeasureBetween(a_playerRoot, *root, a_entries);
+				}
+			}
+			// The giver is not in memory: the door inside its cell, if that cell opens straight into a world;
+			// else the static point (the anchor outside).
+			if (const auto marker = a_live ? nullptr : LiveRef(a_start.markerID)) {
+				if (const auto root = WorldDoorRoot(*marker)) {
+					return MeasureBetween(a_playerRoot, *root, a_entries);
 				}
 			}
 			if (a_start.world) {
-				return Between(a_playerRoot, RootPoint{ RootWorld(a_start.world), a_start.pos }, a_entries);
+				return MeasureBetween(a_playerRoot, ToRoot(a_start.world, a_start.pos), a_entries);
 			}
 			return std::nullopt;
 		}

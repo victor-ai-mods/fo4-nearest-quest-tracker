@@ -13,17 +13,6 @@
             }
         },
         {
-            "id": "ShowStartHotkey",
-            "desc": "$NQT_KEY_SHOW_START",
-            "action": {
-                "type": "CallFunction",
-                "form": "NearestQuestTracker.esp|800",
-                "scriptName": "NQT_MainScript",
-                "function": "ShowNearestStart",
-                "params": []
-            }
-        },
-        {
             "id": "ExcludeHotkey",
             "desc": "$NQT_KEY_EXCLUDE",
             "action": {
@@ -42,6 +31,28 @@
                 "form": "NearestQuestTracker.esp|800",
                 "scriptName": "NQT_MainScript",
                 "function": "RestoreLast",
+                "params": []
+            }
+        },
+        {
+            "id": "AutoTrackHotkey",
+            "desc": "$NQT_KEY_AUTO_TRACK",
+            "action": {
+                "type": "CallFunction",
+                "form": "NearestQuestTracker.esp|800",
+                "scriptName": "NQT_MainScript",
+                "function": "ToggleAutoTrack",
+                "params": []
+            }
+        },
+        {
+            "id": "ShowQuestHotkey",
+            "desc": "$NQT_KEY_SHOW_QUEST",
+            "action": {
+                "type": "CallFunction",
+                "form": "NearestQuestTracker.esp|800",
+                "scriptName": "NQT_MainScript",
+                "function": "ShowCurrentQuest",
                 "params": []
             }
         }

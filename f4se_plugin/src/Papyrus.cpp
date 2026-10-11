@@ -1,6 +1,9 @@
 #include "Papyrus.h"
 
 #include "EngineTypes.h"
+#include "Interiors.h"
+#include "MapMarkers.h"
+#include "QuestCategories.h"
 #include "QuestDistance.h"
 #include "QuestStarts.h"
 #include "QuestText.h"
@@ -21,30 +24,57 @@ namespace NQT::Papyrus
 		}
 
 		// Sources for FindNearestTarget.
-		constexpr std::int32_t kSourceQuests = 1;  // targets of Pip-Boy quests
-		constexpr std::int32_t kSourceStarts = 2;  // start points of quests not started yet
-		constexpr std::int32_t kSourceNoMarker = 4;  // Pip-Boy quests without a marker (with kSourceQuests)
+		constexpr std::int32_t kSourceQuests = 1;     // targets of Pip-Boy quests
+		constexpr std::int32_t kSourceStarts = 2;     // start points of quests not started yet
+		constexpr std::int32_t kSourceNoMarker = 4;   // Pip-Boy quests without a marker (with kSourceQuests)
+		constexpr std::int32_t kSourceLocations = 8;  // map markers not discovered yet
+		constexpr std::int32_t kSourceInteriors = 16; // interiors never entered
+		constexpr std::int32_t kSourceSkipOwnedLocked = 32;  // with kSourceInteriors: skip locked doors that are a crime to pick
 
-		// Third element of FindNearestTarget's result.
-		constexpr std::int32_t kFlagNoMarker = 1;
+		// First element of FindNearestTarget's result.
+		enum class TargetKind : std::int32_t
+		{
+			kNone = 0,
+			kQuest = 1,     // Pip-Boy quest with a marker
+			kNoMarker = 2,  // Pip-Boy quest without a marker
+			kStart = 3,     // start point of a quest not started yet
+			kLocation = 4,  // map marker not discovered yet
+			kInterior = 5,  // interior never entered; the marker goes on its door
+		};
+
+		std::unordered_set<const RE::TESForm*> FormsOf(RE::BGSListForm* a_list)
+		{
+			std::unordered_set<const RE::TESForm*> result;
+			if (a_list) {
+				a_list->ForEachForm([&](RE::TESForm* a_form) {
+					result.insert(a_form);
+					return RE::BSContainer::ForEachResult::kContinue;
+				});
+			}
+			return result;
+		}
 
 		// Returns FormIDs, not forms: a single TESQuest* returned by CommonLibF4 reaches the script
 		// as None (checked in game 2026-09-30). CommonLibF4 types the variable with the quest's bound
 		// script (e.g. dlc04:dlc04koquestscript), the engine's own CreateVarFromValue<TESQuest*> types
 		// it "Quest". Papyrus turns the FormIDs into forms with Game.GetForm.
-		// Result: [quest, marker ref, flags]; the marker ref is 0 for a Pip-Boy quest; flags: kFlagNoMarker;
-		// [0, 0, 0] if none.
-		std::vector<std::int32_t> FindNearestTarget(std::monostate, RE::BGSListForm* a_excluded, std::int32_t a_sources)
+		// Result: [kind, quest, marker ref]; quest is 0 for a location or interior; the marker ref is where the start,
+		// location or interior marker goes (0 for a Pip-Boy quest); [0, 0, 0] if none. a_excludedLocations holds map
+		// markers and doors: a door excludes its interior, whichever door leads in.
+		std::vector<std::int32_t> FindNearestTarget(std::monostate, RE::BGSListForm* a_excludedQuests,
+			RE::BGSListForm* a_excludedLocations, std::int32_t a_sources, bool a_allLocations)
 		{
-			std::unordered_set<const RE::TESForm*> excluded;
-			if (a_excluded) {
-				a_excluded->ForEachForm([&](RE::TESForm* a_form) {
-					excluded.insert(a_form);
-					return RE::BSContainer::ForEachResult::kContinue;
-				});
+			const auto excludedQuests = FormsOf(a_excludedQuests);
+			const auto excludedLocations = FormsOf(a_excludedLocations);
+			std::unordered_set<const RE::TESObjectCELL*> excludedInteriors;
+			for (const auto form : excludedLocations) {
+				const auto ref = form ? form->As<RE::TESObjectREFR>() : nullptr;
+				if (const auto interior = ref ? GetDoorInterior(*ref) : nullptr) {
+					excludedInteriors.insert(interior);
+				}
 			}
-
-			logger::debug("FindNearestTarget (sources {}, {} excluded):"sv, a_sources, excluded.size());
+			logger::debug("FindNearestTarget (sources {}, {} quests and {} locations excluded):"sv, a_sources,
+				excludedQuests.size(), excludedLocations.size());
 			std::vector<Candidate> candidates;
 			if (a_sources & kSourceQuests) {
 				candidates = CollectQuestCandidates();
@@ -55,18 +85,30 @@ namespace NQT::Papyrus
 			if (a_sources & kSourceStarts) {
 				std::ranges::move(CollectStartCandidates(), std::back_inserter(candidates));
 			}
-			const auto nearest = FindNearest(candidates, [&](const RE::TESQuest& a_quest) {
-				return excluded.contains(&a_quest);
+			if (a_sources & kSourceLocations) {
+				std::ranges::move(CollectLocationCandidates(a_allLocations), std::back_inserter(candidates));
+			}
+			if (a_sources & kSourceInteriors) {
+				std::ranges::move(CollectInteriorCandidates((a_sources & kSourceSkipOwnedLocked) != 0), std::back_inserter(candidates));
+			}
+			const auto nearest = FindNearest(candidates, [&](const Candidate& a_candidate) {
+				return a_candidate.interior ? excludedInteriors.contains(a_candidate.interior) :
+				       a_candidate.location ? excludedLocations.contains(a_candidate.location) :
+				                              excludedQuests.contains(a_candidate.quest);
 			});
 			if (!nearest) {
 				logger::debug("  -> none"sv);
 				return { 0, 0, 0 };
 			}
-			logger::debug("  -> {}{}{}"sv, DescribeQuest(*nearest->quest),
-				nearest->start ? std::format(", start marker on {:08X}"sv, nearest->markerID) : ""s,
-				nearest->noMarker ? ", no marker"sv : ""sv);
-			return { static_cast<std::int32_t>(nearest->quest->GetFormID()), static_cast<std::int32_t>(nearest->markerID),
-				nearest->noMarker ? kFlagNoMarker : 0 };
+			const auto kind = nearest->interior ? TargetKind::kInterior :
+			                  nearest->location ? TargetKind::kLocation :
+			                  nearest->start    ? TargetKind::kStart :
+			                  nearest->noMarker ? TargetKind::kNoMarker :
+			                                      TargetKind::kQuest;
+			logger::debug("  -> {}{}"sv, DescribeCandidate(*nearest),
+				nearest->markerID ? std::format(", marker on {:08X}"sv, nearest->markerID) : ""s);
+			return { std::to_underlying(kind), nearest->quest ? static_cast<std::int32_t>(nearest->quest->GetFormID()) : 0,
+				static_cast<std::int32_t>(nearest->markerID) };
 		}
 
 		// A quest may have several start points: the nearest available one (e.g. the next bottle once one is read).
@@ -108,8 +150,22 @@ namespace NQT::Papyrus
 			return start ? NQT::GetStartRadioName(*start) : std::string{};
 		}
 
-		// Replaces the text of an objective of a_quest (the start marker quest). Not saved: the
-		// script sets it again after a load. Main thread: the Pip-Boy and HUD read this string.
+		// PlayerCharacterQuestEvent::Notify (OG id 395737). Type 1 = "objective updated": PipboyQuestData::
+		// ProcessEvent then runs UpdateObjective, which reads GetDisplayText again.
+		void NotifyObjectiveUpdated(RE::BGSInstancedQuestObjective* a_instance)
+		{
+			using func_t = void(std::int32_t, RE::BGSInstancedQuestObjective*);
+			static REL::Relocation<func_t*> func{ REL::ID(395737) };
+			constexpr std::int32_t kObjectiveUpdated = 1;
+			func(kObjectiveUpdated, a_instance);
+		}
+
+		// Replaces the text of an objective of a_quest (a marker quest). Not saved: the script sets it again
+		// after a load. Main thread: the Pip-Boy and HUD read this string.
+		// The Pip-Boy keeps its own copy of the text, made when the objective was shown (or the save loaded -
+		// before the script runs, so with the ESP text "Location"); like PlayerCharacter::
+		// UpdateInstancedQuestObjective (rva EA4240, disassembled 2026-10-07) we send "objective updated" for the
+		// shown instances, under questTargetLock as the engine does.
 		bool SetObjectiveText(std::monostate, RE::TESQuest* a_quest, std::int32_t a_index, std::string_view a_text)
 		{
 			if (!a_quest) {
@@ -119,6 +175,14 @@ namespace NQT::Papyrus
 				const auto own = const_cast<Engine::QuestObjective*>(Engine::AsObjective(objective));
 				if (own && own->index == a_index) {
 					own->displayText = a_text;
+					if (const auto player = RE::PlayerCharacter::GetSingleton()) {
+						RE::BSAutoLock lock{ player->questTargetLock };
+						for (auto& instance : player->objectives) {
+							if (Engine::AsObjective(instance.objective) == own) {
+								NotifyObjectiveUpdated(&instance);
+							}
+						}
+					}
 					return true;
 				}
 			}
@@ -147,6 +211,11 @@ namespace NQT::Papyrus
 		std::string GetQuestDisplayName(std::monostate, RE::TESQuest* a_quest)
 		{
 			return a_quest ? NQT::GetQuestDisplayName(*a_quest) : std::string{};
+		}
+
+		std::vector<std::string> GetObjectiveTexts(std::monostate, RE::TESQuest* a_quest)
+		{
+			return a_quest ? NQT::GetObjectiveTexts(*a_quest) : std::vector<std::string>{};
 		}
 
 		// Papyrus strings are UTF-8 here (Russian names from ParseString): count code points, not bytes.
@@ -185,6 +254,47 @@ namespace NQT::Papyrus
 		{
 			NQT::DumpQuestTargets();
 			NQT::DumpQuestStarts();
+			NQT::DumpQuestCategories();
+		}
+
+		void DumpMapMarkers(std::monostate)
+		{
+			NQT::DumpMapMarkers();
+		}
+
+		void DumpInteriors(std::monostate)
+		{
+			NQT::DumpInteriors();
+		}
+
+		std::string GetMapMarkerName(std::monostate, RE::TESObjectREFR* a_marker)
+		{
+			return a_marker ? NQT::GetMapMarkerName(*a_marker) : std::string{};
+		}
+
+		std::string GetMapMarkerTypeName(std::monostate, RE::TESObjectREFR* a_marker)
+		{
+			return a_marker ? NQT::GetMapMarkerTypeName(*a_marker, GetGameLanguage()) : std::string{};
+		}
+
+		std::string GetInteriorName(std::monostate, RE::TESObjectREFR* a_door)
+		{
+			return a_door ? GetDoorInteriorName(*a_door) : std::string{};
+		}
+
+		bool IsInteriorVisited(std::monostate, RE::TESObjectREFR* a_door)
+		{
+			return !a_door || IsDoorInteriorVisited(*a_door);
+		}
+
+		std::string GetQuestCategory(std::monostate, RE::TESQuest* a_quest)
+		{
+			return a_quest ? NQT::GetQuestCategory(*a_quest) : std::string{};
+		}
+
+		std::string GetQuestCategoryName(std::monostate, std::string_view a_key)
+		{
+			return NQT::GetQuestCategoryName(a_key, GetGameLanguage());
 		}
 	}
 
@@ -204,10 +314,19 @@ namespace NQT::Papyrus
 		a_vm->BindNativeMethod(kScript, "Log"sv, Log, true);
 		a_vm->BindNativeMethod(kScript, "GetQuestDistance"sv, GetQuestDistance, true);
 		a_vm->BindNativeMethod(kScript, "GetQuestDisplayName"sv, GetQuestDisplayName, false);  // main thread: ParseString reads aliases
+		a_vm->BindNativeMethod(kScript, "GetObjectiveTexts"sv, GetObjectiveTexts, false);  // main thread: ParseString reads aliases
 		a_vm->BindNativeMethod(kScript, "Shorten"sv, Shorten, true);
 		a_vm->BindNativeMethod(kScript, "GetLanguage"sv, GetLanguage, true);
 		a_vm->BindNativeMethod(kScript, "GetObjectiveSignature"sv, GetObjectiveSignature, true);
 		a_vm->BindNativeMethod(kScript, "DumpQuestTargets"sv, DumpQuestTargets, true);
+		a_vm->BindNativeMethod(kScript, "DumpMapMarkers"sv, DumpMapMarkers, true);
+		a_vm->BindNativeMethod(kScript, "DumpInteriors"sv, DumpInteriors, false);  // main thread: the player's cell updates its seen data
+		a_vm->BindNativeMethod(kScript, "GetMapMarkerName"sv, GetMapMarkerName, true);
+		a_vm->BindNativeMethod(kScript, "GetMapMarkerTypeName"sv, GetMapMarkerTypeName, true);
+		a_vm->BindNativeMethod(kScript, "GetInteriorName"sv, GetInteriorName, true);
+		a_vm->BindNativeMethod(kScript, "IsInteriorVisited"sv, IsInteriorVisited, true);
+		a_vm->BindNativeMethod(kScript, "GetQuestCategory"sv, GetQuestCategory, true);
+		a_vm->BindNativeMethod(kScript, "GetQuestCategoryName"sv, GetQuestCategoryName, true);
 		logger::info("registered {} native functions"sv, kScript);
 		return true;
 	}

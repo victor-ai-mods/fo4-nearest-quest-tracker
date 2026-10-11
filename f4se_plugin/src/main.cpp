@@ -1,6 +1,7 @@
 #include "Version.h"
 
 #include "Papyrus.h"
+#include "QuestCategories.h"
 #include "QuestDistance.h"
 #include "QuestStarts.h"
 #include "QuestText.h"
@@ -10,12 +11,15 @@ namespace
 	void OnF4SEMessage(F4SE::MessagingInterface::Message* a_msg)
 	{
 		if (a_msg->type == F4SE::MessagingInterface::kGameDataReady) {
-			// NQT_StartMarkerQuest (tools/gen_esp.py): its objective is never a candidate itself.
+			// NQT_StartMarkerQuest, NQT_LocationMarkerQuest (tools/gen_esp.py): their objectives are never candidates.
 			const auto dataHandler = RE::TESDataHandler::GetSingleton();
-			const auto markerQuest = dataHandler ? dataHandler->LookupForm<RE::TESQuest>(0x805, "NearestQuestTracker.esp"sv) : nullptr;
-			NQT::SetMarkerQuest(markerQuest);
-			logger::info("start marker quest {:08X}"sv, markerQuest ? markerQuest->GetFormID() : 0u);
+			const auto startQuest = dataHandler ? dataHandler->LookupForm<RE::TESQuest>(0x805, "NearestQuestTracker.esp"sv) : nullptr;
+			const auto locationQuest = dataHandler ? dataHandler->LookupForm<RE::TESQuest>(0x809, "NearestQuestTracker.esp"sv) : nullptr;
+			NQT::SetMarkerQuests(startQuest, locationQuest);
+			logger::info("marker quests: start {:08X}, location {:08X}"sv, startQuest ? startQuest->GetFormID() : 0u,
+				locationQuest ? locationQuest->GetFormID() : 0u);
 			NQT::LoadQuestStarts();
+			NQT::LoadQuestCategories();
 
 			const auto player = RE::PlayerCharacter::GetSingleton();
 			logger::info("game data ready; player {:p}, objectives {}, language {}"sv,

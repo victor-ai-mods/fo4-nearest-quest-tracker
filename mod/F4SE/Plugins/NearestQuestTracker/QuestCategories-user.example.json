@@ -1,0 +1,17 @@
+{
+ "_comment": [
+  "Nearest Quest Tracker: your own quest categories (for quests from other mods, or to fix a vanilla one).",
+  "Copy this file to QuestCategories-user.json in this folder. The example file itself is never read.",
+  "\"quests\": one object per quest, {\"quest\": \"Plugin.esp|ID\", \"category\": \"key\"}; ID is the FormID as xEdit",
+  "  shows it: 0F12, 00000F12, 01000F12 or FE001F12 (ESL) all work. An entry here replaces the built-in one.",
+  "\"category\" is a key from QuestCategories.json (\"side.misc.diamondcity\") or a new one from \"categories\".",
+  "\"categories\": optional new categories, {\"key\": \"parent.child\", \"ru\": \"...\", \"en\": \"...\"}; the parent key",
+  "  must exist (built-in or listed earlier in this file). New ones go after the built-in ones of the same parent.",
+  "Quests without a category go to \"Other quests\", grouped by plugin.",
+  "Example (the plugin is made up):",
+  "  {\"categories\": [{\"key\": \"side.mymod\", \"ru\": \"Мой мод\", \"en\": \"My mod\"}],",
+  "   \"quests\": [{\"quest\": \"MyQuestMod.esp|000F12\", \"category\": \"side.mymod\"}]}"
+ ],
+ "categories": [],
+ "quests": []
+}

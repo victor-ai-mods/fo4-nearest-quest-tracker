@@ -21,6 +21,9 @@ namespace NQT
 		std::string                name;           // for the log
 	};
 
+	// "Plugin.esp|ID" (data files) -> loaded FormID; 0 if the plugin is not loaded or the text is malformed.
+	[[nodiscard]] std::uint32_t ResolveID(std::string_view a_key);
+
 	// Reads Data\F4SE\Plugins\NearestQuestTracker\QuestStarts.json and QuestStarts-user.json.
 	// Entries whose plugins are not loaded are skipped. Call once game data is loaded.
 	void LoadQuestStarts();
