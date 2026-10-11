@@ -1,5 +1,6 @@
 build/
 release/
+images/
 __pycache__/
 tools/cache/
 mod/Interface/NearestQuestTracker.swf
