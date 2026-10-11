@@ -48,6 +48,12 @@
             "help": "$NQT_KEY_SHOW_QUEST_HELP"
         },
         {
+            "id": "WindowHotkey",
+            "type": "hotkey",
+            "text": "$NQT_KEY_WINDOW",
+            "help": "$NQT_KEY_WINDOW_HELP"
+        },
+        {
             "type": "spacer"
         },
         {

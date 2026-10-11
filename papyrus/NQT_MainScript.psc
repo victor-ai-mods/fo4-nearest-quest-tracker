@@ -97,6 +97,11 @@ Int Property KindStart = 3 AutoReadOnly Hidden
 Int Property KindLocation = 4 AutoReadOnly Hidden
 Int Property KindInterior = 5 AutoReadOnly Hidden
 
+; Own window (menu/NQTMenu.as -> Interface\NearestQuestTracker.swf); the name is the one NQTMenu.MENU_NAME closes.
+String Property WindowMenu = "NQT_Menu" AutoReadOnly Hidden
+String Property WindowFile = "NearestQuestTracker" AutoReadOnly Hidden
+String Property WindowLogEvent = "NQT_MenuLog" AutoReadOnly Hidden
+
 Event OnInit()
     Setup()
 EndEvent
@@ -348,6 +353,30 @@ Function ShowCurrentQuest()
     ElseIf window
         Debug.MessageBox(text)
     EndIf
+EndFunction
+
+; Opens the window (closes it if open). F4SE keeps custom menus only for the game session, so the menu is
+; registered on first use after each game start; default MenuData: pauses the game, mouse cursor, the
+; player's interface color, no cursor with a gamepad.
+Function ToggleWindow()
+    If UI.IsMenuOpen(WindowMenu)
+        UI.CloseMenu(WindowMenu)
+        NQT_Native.Log("ToggleWindow: closed")
+        Return
+    EndIf
+    If !UI.IsMenuRegistered(WindowMenu)
+        UI:MenuData data = new UI:MenuData
+        Bool registered = UI.RegisterCustomMenu(WindowMenu, WindowFile, "root1", data)
+        NQT_Native.Log("ToggleWindow: RegisterCustomMenu " + registered + ", flags " + data.menuFlags)
+    EndIf
+    RegisterForExternalEvent(WindowLogEvent, "OnWindowLog")
+    Bool opened = UI.OpenMenu(WindowMenu)
+    NQT_Native.Log("ToggleWindow: OpenMenu " + opened)
+EndFunction
+
+; The window's f4se.SendExternalEvent(WindowLogEvent, text): what reached it (events, keys, clicks).
+Function OnWindowLog(String asText)
+    NQT_Native.Log("window: " + asText)
 EndFunction
 
 ; ---------------------------------------------------------------------------------------------------

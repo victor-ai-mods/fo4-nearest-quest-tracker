@@ -51,6 +51,7 @@ HOTKEYS = [
     ('RestoreHotkey', 'KEY_RESTORE', 'RestoreLast'),
     ('AutoTrackHotkey', 'KEY_AUTO_TRACK', 'ToggleAutoTrack'),
     ('ShowQuestHotkey', 'KEY_SHOW_QUEST', 'ShowCurrentQuest'),
+    ('WindowHotkey', 'KEY_WINDOW', 'ToggleWindow'),
 ]
 
 # Виды целей для кнопок «Вернуть …» (NQT_MainScript: KindQuest, KindStart, KindLocation, KindInterior).
@@ -78,6 +79,11 @@ STRINGS = {
         'KEY_AUTO_TRACK_HELP': 'Turns the "Automatic" setting below on or off; a notification tells which.',
         'KEY_SHOW_QUEST': 'Show current quest',
         'KEY_SHOW_QUEST_HELP': 'Shows the name of the tracked quest and its current objectives - what to do now.',
+        'KEY_WINDOW': 'Open window',
+        'KEY_WINDOW_HELP': 'Opens the Nearest Quest Tracker window (the game pauses). Esc closes it.',
+        'MENU_TITLE': 'Nearest Quest Tracker',
+        'MENU_EMPTY': 'The quest and location lists will be here.',
+        'MENU_CLOSE': 'Close',
         'SEC_PICK': 'What to pick',
         'INCLUDE_QUESTS': 'Pick active quests',
         'INCLUDE_QUESTS_HELP': 'Quests from your Pip-Boy that have a marker.',
@@ -145,6 +151,11 @@ STRINGS = {
         'KEY_AUTO_TRACK_HELP': 'Включает или выключает настройку «Автоматически» ниже; уведомление сообщает, что стало.',
         'KEY_SHOW_QUEST': 'Показать текущий квест',
         'KEY_SHOW_QUEST_HELP': 'Показывает название отслеживаемого квеста и его текущие цели — что нужно сделать.',
+        'KEY_WINDOW': 'Открыть окно',
+        'KEY_WINDOW_HELP': 'Открывает окно Nearest Quest Tracker (игра на паузе). Закрыть — Esc.',
+        'MENU_TITLE': 'Nearest Quest Tracker',
+        'MENU_EMPTY': 'Здесь будут списки квестов и локаций.',
+        'MENU_CLOSE': 'Закрыть',
         'SEC_PICK': 'Что выбирать',
         'INCLUDE_QUESTS': 'Выбирать активные квесты',
         'INCLUDE_QUESTS_HELP': 'Квесты из Pip-Boy, у которых есть маркер.',

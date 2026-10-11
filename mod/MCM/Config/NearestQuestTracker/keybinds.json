@@ -55,6 +55,17 @@
                 "function": "ShowCurrentQuest",
                 "params": []
             }
+        },
+        {
+            "id": "WindowHotkey",
+            "desc": "$NQT_KEY_WINDOW",
+            "action": {
+                "type": "CallFunction",
+                "form": "NearestQuestTracker.esp|800",
+                "scriptName": "NQT_MainScript",
+                "function": "ToggleWindow",
+                "params": []
+            }
         }
     ]
 }

@@ -1,5 +1,5 @@
 """
-Полная сборка мода: DLL (CMake из VS 18), NearestQuestTracker.esp, MCM, скрипты Papyrus.
+Полная сборка мода: DLL (CMake из VS 18), NearestQuestTracker.esp, MCM, окно (SWF), скрипты Papyrus.
 
     python tools/build.py              — Debug-DLL (для разработки: лог уровня debug)
     python tools/build.py --release    — Release-DLL (в пакет)
@@ -19,6 +19,10 @@ VS = r'C:\Program Files\Microsoft Visual Studio\18\Enterprise'
 CMAKE = os.path.join(VS, r'Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe')
 VCPKG = os.path.join(VS, r'VC\vcpkg')
 PAPYRUS = os.path.join(GAME, 'Papyrus Compiler', 'PapyrusCompiler.exe')
+# Исходники Papyrus из f4se_0_06_23.7z (Data/Scripts/Source/*.psc): UI, ScriptObject.RegisterForExternalEvent…
+# В игре их нет (там только .pex F4SE), в репозиторий не кладём — чужие файлы.
+F4SE_SCRIPTS = os.environ.get('F4SE_SCRIPTS', os.path.join(os.path.dirname(ROOT), '_tools', 'f4se_0_06_23',
+                                                           'Scripts', 'Source'))
 
 
 def run(args, cwd):
@@ -41,9 +45,14 @@ def main():
         run([CMAKE, '--build', '--preset', preset], plugin)
     run([sys.executable, os.path.join(ROOT, 'tools', 'gen_esp.py')], ROOT)
     run([sys.executable, os.path.join(ROOT, 'tools', 'gen_mcm.py')], ROOT)
-    # Source\User — только ради MCM.psc (MCM.RefreshMenu); Base раньше, чтобы ванильные типы брались из него.
-    run([PAPYRUS, 'papyrus', '-i=papyrus;' + os.path.join(GAME, r'Data\Scripts\Source\Base') + ';'
-         + os.path.join(GAME, r'Data\Scripts\Source\User'),
+    run([sys.executable, os.path.join(ROOT, 'tools', 'gen_menu.py')], ROOT)
+    if not os.path.exists(os.path.join(F4SE_SCRIPTS, 'UI.psc')):
+        sys.exit('нет %s — распакуйте Data/Scripts/Source из f4se_0_06_23.7z (или задайте F4SE_SCRIPTS)'
+                 % os.path.join(F4SE_SCRIPTS, 'UI.psc'))
+    # F4SE раньше Base: его версии ванильных классов (ScriptObject, Form…) — расширенные.
+    # Source\User — только ради MCM.psc (MCM.RefreshMenu).
+    run([PAPYRUS, 'papyrus', '-i=papyrus;' + F4SE_SCRIPTS + ';' + os.path.join(GAME, r'Data\Scripts\Source\Base')
+         + ';' + os.path.join(GAME, r'Data\Scripts\Source\User'),
          '-o=' + os.path.join('build', 'scripts'), '-f=Institute_Papyrus_Flags.flg', '-all'], ROOT)
     print('готово: %s' % ', '.join(presets))
 
