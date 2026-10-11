@@ -15,8 +15,8 @@ And it cannot be fully fixed:
   game's dialogue, scenes, triggers and scripts, different for every quest. So a new-quest marker sometimes leads
   to a quest giver who cannot give the quest right now (asleep behind a locked door, too early, something else must
   be done first). Exclude such a target with one key.
-- **Quests in Fallout 4 are often buggy themselves**: an objective without a marker, a marker in the wrong place,
-  an objective that stays after it is done. The mod shows what the game gives, these bugs included.
+- **Quests in Fallout 4 are often buggy themselves**: sometimes quests refuse to start, and sometimes they refuse
+  to end. The mod shows what the game gives, these bugs included.
 
 ## Features
 
