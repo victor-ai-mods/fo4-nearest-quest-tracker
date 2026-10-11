@@ -185,6 +185,7 @@ package
 		// Движок: событие управления меню ("Cancel", "Accept", …), abPressed — нажато / отпущено.
 		public function ProcessUserEvent(asEvent:String, abPressed:Boolean):Boolean
 		{
+			Log("input: ProcessUserEvent " + asEvent + " " + abPressed);    // 3e: какие события шлёт геймпад
 			if (!abPressed && asEvent == "Cancel")
 			{
 				Close("Cancel");
@@ -193,8 +194,15 @@ package
 			return false;
 		}
 
+		// 3e: смена платформы ввода (клавиатура+мышь / геймпад), если движок зовёт её у нашего меню, как у ванильных.
+		public function SetPlatform(auiPlatform:uint, abPS3Switch:Boolean):void
+		{
+			Log("input: SetPlatform " + auiPlatform + " " + abPS3Switch);
+		}
+
 		private function OnAddedToStage(e:Event):void
 		{
+			stage.addEventListener(KeyboardEvent.KEY_UP, OnKeyUp);
 			stage.addEventListener(KeyboardEvent.KEY_DOWN, OnKeyDown);
 			stage.addEventListener(MouseEvent.MOUSE_WHEEL, OnWheel);
 			addEventListener(Event.ENTER_FRAME, OnFrame);
@@ -210,8 +218,14 @@ package
 			}
 		}
 
+		private function OnKeyUp(e:KeyboardEvent):void
+		{
+			Log("input: key up " + e.keyCode + " char " + e.charCode + " location " + e.keyLocation);
+		}
+
 		private function OnKeyDown(e:KeyboardEvent):void
 		{
+			Log("input: key down " + e.keyCode + " char " + e.charCode + " location " + e.keyLocation);
 			if (e.keyCode == 27)    // Esc
 			{
 				Close("Esc");
