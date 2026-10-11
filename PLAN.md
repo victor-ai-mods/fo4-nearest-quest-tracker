@@ -535,7 +535,13 @@ displayed + `ParseString`, что у названия; повторы текст
   MessageBoxMenu `0x8018499` (глубину не пишет), TerminalMenu `0x8008409`/9, LevelUpMenu `0x4010481`/9, BookMenu
   `0x8608129`/9, SleepWaitMenu `0x8418989`/10, CreditsMenu `0x28009`/15, ExamineConfirmMenu `0x8419`/17, PauseMenu
   `0x400418`/11, PipboyMenu `0xA0A101|0x10000`/8. Флаги F4SE по умолчанию = MessageBoxMenu + курсор 0x4 — оставлены;
-  **глубина → 9** (kTerminal). Развёрнуто, ретест ждёт (в броне и без).
+  **глубина → 9** (kTerminal).
+- **Тест 2 (глубина 9, в броне):** окно видно, но мерцает «то есть, то нет»; видны только линии (рамки панели и кнопки,
+  линия под заголовком), без заливок и текста, сверху размытая тёмная полоса. Версия: флаг 0x8000 — `kCustomRendering`
+  (CommonLibF4; F4SE зовёт его ApplyDropDownFilter): меню рисуется в текстуру экрана-модели (FlatScreenModel /
+  HUDScreenModel), а в броне её занимает HUD брони. PauseMenu (рисуется прямо на экран) — без 0x8000 и 0x10000.
+  **Флаги → `0x800049D`** (без 0x8000 и 0x10000 `kAssignCursorToRenderer`). Развёрнуто, ретест ждёт. Если цвет интерфейса
+  пропадёт (F4SE кладёт shaderTarget в subcomponents только при 0x8000) — красить окно самим (3e).
 - Что смотреть в логе после теста: `ToggleWindow: RegisterCustomMenu True`, `window: onF4SEObjCreated; BGSCodeObj: …`,
   `window: ProcessUserEvent …` (какие события шлёт движок), `window: key down …`, `window: close (…)`.
 

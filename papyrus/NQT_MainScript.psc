@@ -356,10 +356,12 @@ Function ShowCurrentQuest()
 EndFunction
 
 ; Opens the window (closes it if open). F4SE keeps custom menus only for the game session, so the menu is
-; registered on first use after each game start. MenuData flags as F4SE's default (= MessageBoxMenu's plus
-; the cursor): pauses the game, mouse cursor, the player's interface color, no cursor with a gamepad. Depth
-; not F4SE's 6 (kStandard: PowerArmorRenderer draws over it - in power armor only bits around the cursor
-; showed) but 9 (kTerminal), like TerminalMenu, LevelUpMenu and BookMenu.
+; registered on first use after each game start. Flags: F4SE's default (= MessageBoxMenu's plus the cursor:
+; pauses the game, mouse cursor, menu controls, modal) without kCustomRendering 0x8000 and
+; kAssignCursorToRenderer 0x10000 - with them the menu went into the screen model texture, which in power armor
+; is the armor HUD's (the window flickered, half drawn); PauseMenu draws straight to the screen without them too.
+; Extended flags as F4SE's: the player's interface color, no cursor with a gamepad. Depth not F4SE's 6
+; (kStandard, PowerArmorRenderer's) but 9 (kTerminal), like TerminalMenu, LevelUpMenu and BookMenu.
 Function ToggleWindow()
     If UI.IsMenuOpen(WindowMenu)
         UI.CloseMenu(WindowMenu)
@@ -368,6 +370,7 @@ Function ToggleWindow()
     EndIf
     If !UI.IsMenuRegistered(WindowMenu)
         UI:MenuData data = new UI:MenuData
+        data.menuFlags = 0x800049D
         data.depth = 9
         Bool registered = UI.RegisterCustomMenu(WindowMenu, WindowFile, "root1", data)
         NQT_Native.Log("ToggleWindow: RegisterCustomMenu " + registered + ", flags " + data.menuFlags + ", depth " \
