@@ -122,15 +122,43 @@ def rect(xmin, xmax, ymin, ymax):
     return bytes(int(bits[i:i + 8], 2) for i in range(0, len(bits), 8))
 
 
+def matrix_translate(x, y):
+    """MATRIX без масштаба и поворота, сдвиг в twips (знаковые числа)."""
+    nbits = max(abs(x).bit_length(), abs(y).bit_length()) + 1
+    bits = '00' + format(nbits, '05b') + ''.join(format(v & ((1 << nbits) - 1), '0%db' % nbits) for v in (x, y))
+    bits += '0' * (-len(bits) % 8)
+    return bytes(int(bits[i:i + 8], 2) for i in range(0, len(bits), 8))
+
+
+def font_holder(char_id, font_class):
+    """DefineEditText с FontClass, как у ванильных полей (MessageBoxMenu.swf: HasFontClass + UseOutlines)."""
+    body = struct.pack('<H', char_id) + rect(0, 200, 0, 200)
+    body += bytes([0x88, 0x91])     # HasText, ReadOnly | HasFontClass, NoSelect, UseOutlines
+    body += font_class.encode() + b'\x00' + struct.pack('<H', 360)   # кегль 18
+    body += b'\x00' + b' \x00'      # имя переменной "", текст " "
+    return tag(37, body)
+
+
+# Шрифты, которые окно берёт из игровой библиотеки (TextFormat в NQTMenu.as).
+FONTS = ['$MAIN_Font', '$MAIN_Font_Bold']
+
+
 def build_base_swf():
     body = rect(0, WIDTH * 20, 0, HEIGHT * 20) + struct.pack('<HH', 30 << 8, 1)   # 30 fps, 1 кадр
     body += tag(69, struct.pack('<I', 0x08))            # FileAttributes: ActionScript 3
     body += tag(9, b'\x00\x00\x00')                     # SetBackgroundColor
     # ImportAssets2 "fonts_en.swf" без символов — как у ванильных меню (MessageBoxMenu.swf): подключает игровую
-    # библиотеку шрифтов ($MAIN_Font…). Без него текст окна — чёрные прямоугольники (в HUDMenu шрифты уже есть).
+    # библиотеку шрифтов.
     body += tag(71, b'fonts_en.swf\x00' + struct.pack('<BBH', 1, 0, 0))
+    # Шрифт библиотеки привязывается к SWF только через статическое поле с его FontClass; поле, созданное из AS3
+    # (TextFormat "$MAIN_Font"), ищет среди привязанных — без этих полей текст окна был чёрными прямоугольниками
+    # (в HUDMenu такие поля есть, поэтому виджет Explosives Cycler работал). Пустые поля — за левым краем экрана.
+    for i, font in enumerate(FONTS):
+        body += font_holder(i + 1, font)
     body += tag(82, struct.pack('<I', 1) + b'\x00' + build_abc())   # DoABC
     body += tag(76, struct.pack('<HH', 1, 0) + CLASS.encode() + b'\x00')   # SymbolClass: класс документа
+    for i in range(len(FONTS)):                         # PlaceObject2: HasMatrix | HasCharacter
+        body += tag(26, bytes([0x06]) + struct.pack('<HH', i + 1, i + 1) + matrix_translate(-2000 * 20, 0))
     body += tag(1, b'')                                 # ShowFrame
     body += tag(0, b'')                                 # End
     return b'FWS' + bytes([15]) + struct.pack('<I', len(body) + 8) + body
