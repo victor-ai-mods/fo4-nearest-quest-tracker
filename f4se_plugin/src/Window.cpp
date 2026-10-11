@@ -89,9 +89,16 @@ namespace NQT::Window
 			return ref ? ref->GetFormID() : 0;
 		}
 
+		// Pip-Boy quests: the Pip-Boy's name; others: their own name, else the text of the objective their start
+		// point waits for (or of the first objective), else the editor ID.
 		std::string QuestName(const RE::TESQuest& a_quest, bool a_pipboy)
 		{
 			auto name = a_pipboy ? GetQuestDisplayName(a_quest) : GetStartName(a_quest);
+			if (name.empty() && !a_pipboy) {
+				const auto start = FindAvailableStart(a_quest);
+				const auto first = start ? start : FindQuestStart(a_quest);
+				name = GetObjectiveName(a_quest, first ? first->objective : std::nullopt);
+			}
 			if (name.empty()) {
 				const auto editorID = a_quest.formEditorID.c_str();
 				name = editorID ? editorID : std::format("{:08X}"sv, a_quest.GetFormID());

@@ -12,6 +12,11 @@ namespace NQT
 	// resolved, in the order the engine keeps them; repeated texts once.
 	[[nodiscard]] std::vector<std::string> GetObjectiveTexts(const RE::TESQuest& a_quest);
 
+	// Name for a quest the Pip-Boy does not show and that has no name of its own (Miscellaneous quests, e.g.
+	// DNMessageInABottleQuest): the text of objective a_objective (if given and it has one), else of its first
+	// objective with a text, alias tags (<Alias=...>) cut out; "" if none.
+	[[nodiscard]] std::string GetObjectiveName(const RE::TESQuest& a_quest, std::optional<std::uint16_t> a_objective);
+
 	// sLanguage from the game INI ("en", "ru", ...), lower case; "en" if it is not set.
 	[[nodiscard]] std::string GetGameLanguage();
 }

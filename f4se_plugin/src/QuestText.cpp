@@ -114,6 +114,41 @@ namespace NQT
 		return result;
 	}
 
+	std::string GetObjectiveName(const RE::TESQuest& a_quest, std::optional<std::uint16_t> a_objective)
+	{
+		const Engine::QuestObjective* best = nullptr;
+		for (const auto objective : a_quest.objectives) {
+			const auto own = Engine::AsObjective(objective);
+			if (!own || std::string_view{ LocalizedText(own->displayText) }.empty()) {
+				continue;
+			}
+			if (a_objective && own->index == *a_objective) {
+				best = own;
+				break;
+			}
+			if (!best || own->index < best->index) {
+				best = own;
+			}
+		}
+		if (!best) {
+			return {};
+		}
+		std::string name;
+		bool        inTag = false;
+		for (const auto ch : std::string_view{ LocalizedText(best->displayText) }) {
+			if (ch == '<') {
+				inTag = true;
+			} else if (ch == '>') {
+				inTag = false;
+			} else if (!inTag) {
+				name.push_back(ch);
+			}
+		}
+		const auto first = name.find_first_not_of(" :");
+		const auto last = name.find_last_not_of(" :");
+		return first == std::string::npos ? std::string{} : name.substr(first, last - first + 1);
+	}
+
 	std::string GetGameLanguage()
 	{
 		// sLanguage:General is a static SettingT<INISettingCollection> (OG id 1527977) registered
