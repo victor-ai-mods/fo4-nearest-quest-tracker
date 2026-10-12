@@ -235,7 +235,12 @@ namespace NQT::Window
 				row.SetMember("state", GFxValue(std::to_underlying(state)));
 				if (state == QuestState::kNotOffered) {
 					if (const auto blocker = FindStartBlocker(*entry.quest)) {
-						row.SetMember("blockedBy", builder.String(QuestName(*blocker->holder, true)));
+						// Pip-Boy name only while it shows an objective (a radiant at its first stage may not): else its own name.
+						auto by = GetQuestDisplayName(*blocker->holder);
+						if (by.empty()) {
+							by = QuestName(*blocker->holder, false);
+						}
+						row.SetMember("blockedBy", builder.String(by));
 						row.SetMember("blockedAt", builder.String(std::string{ RE::TESFullName::GetFullName(*blocker->location) }));
 					}
 				}

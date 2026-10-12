@@ -758,6 +758,9 @@ Function PollStart()
             If holder
                 String place = NQT_Native.GetStartBlockedPlace(ShownStart)
                 String by = NQT_Native.GetQuestDisplayName(holder)
+                If by == ""
+                    by = NQT_Native.GetStartName(holder)
+                EndIf
                 Notify(russian, "«" + name + "» сейчас не предлагают: «" + place + "» держит квест «" + by + "»", \
                     name + " is not offered right now: " + place + " is held by " + by)
             Else

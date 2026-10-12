@@ -1650,6 +1650,9 @@ package
 				searchField.setSelection(typedBefore.length, typedBefore.length);
 				return;
 			}
+			// Набранный текст приходит без шрифта ($MAIN_Font из defaultTextFormat не применяется сам, см. SetText) —
+			// иначе вместо букв квадратики.
+			searchField.setTextFormat(searchField.defaultTextFormat);
 			searchText[tab] = searchField.text;
 			scroll = 0;
 			listIndex = 0;
