@@ -103,6 +103,26 @@ namespace NQT
 				start.radioRadius = std::max(radio->get<float>(), 1.0f);
 			}
 			start.running = a_entry.value("running", false);
+			if (const auto closed = a_entry.find("closed"); closed != a_entry.end() && closed->is_array()) {
+				// A condition whose plugin is not loaded is dropped (the entry stays).
+				for (const auto& item : *closed) {
+					if (!item.is_object()) {
+						continue;
+					}
+					StartClosure closure;
+					closure.ru = item.value("ru", ""s);
+					closure.en = item.value("en", ""s);
+					if (const auto id = ResolveRefID(item, "faction")) {
+						closure.faction = RE::TESForm::GetFormByID<RE::TESFaction>(id);
+					}
+					if (const auto id = ResolveRefID(item, "global")) {
+						closure.global = RE::TESForm::GetFormByID<RE::TESGlobal>(id);
+					}
+					if (closure.faction || closure.global) {
+						start.closed.push_back(std::move(closure));
+					}
+				}
+			}
 			return start;
 		}
 
@@ -189,6 +209,50 @@ namespace NQT
 						GetAliasedLoc(*quest, alias->aliasID) == &a_location) {
 						return quest;
 					}
+				}
+			}
+			return nullptr;
+		}
+
+		// TESFaction::GetPCAnEnemy (OG id 586385): what GetPlayerEnemyofFaction / Faction.IsPlayerEnemy read
+		// (Faction.SetPlayerEnemy; also a crime enemy that wears off).
+		[[nodiscard]] bool GetPCAnEnemy(const RE::TESFaction& a_faction)
+		{
+			using func_t = bool(const RE::TESFaction*);
+			static REL::Relocation<func_t*> func{ REL::ID(586385) };
+			return func(&a_faction);
+		}
+
+		// TESReactionForm::GetFactionCombatRelation (OG id 167267): the fight reaction toward a_other; 1 = enemy,
+		// what Faction.SetEnemy sets both ways (mem_Faction_SetEnemy -> TESFaction::SetFactionFightReaction(.., 1)).
+		// TESFaction's TESReactionForm is at +0x30 (TESFaction::GetFactionReaction, OG rva 5A5970).
+		[[nodiscard]] std::int32_t GetCombatRelation(const RE::TESFaction& a_faction, const RE::TESForm* a_other)
+		{
+			using func_t = std::int32_t(const void*, const RE::TESForm*);
+			static REL::Relocation<func_t*> func{ REL::ID(167267) };
+			return func(reinterpret_cast<const std::byte*>(&a_faction) + 0x30, a_other);
+		}
+
+		constexpr std::uint32_t kPlayerFactionID = 0x1C21C;  // Fallout4.esm PlayerFaction
+		constexpr std::int32_t  kEnemyRelation = 1;
+
+		// The faction kick-outs: BoS/Railroad/Minutemen (Nuka-World raids) SetPlayerEnemy, Institute/BoS/Railroad
+		// (MQ00Script.MQFactionKickoutPlayer) and Far Harbor/Acadia SetEnemy with PlayerFaction.
+		[[nodiscard]] bool IsPlayerEnemy(const RE::TESFaction& a_faction)
+		{
+			if (GetPCAnEnemy(a_faction)) {
+				return true;
+			}
+			const auto playerFaction = RE::TESForm::GetFormByID<RE::TESFaction>(kPlayerFactionID);
+			return playerFaction && (GetCombatRelation(a_faction, playerFaction) == kEnemyRelation ||
+										GetCombatRelation(*playerFaction, &a_faction) == kEnemyRelation);
+		}
+
+		[[nodiscard]] const StartClosure* ClosedBy(const QuestStart& a_start)
+		{
+			for (const auto& closure : a_start.closed) {
+				if ((closure.faction && IsPlayerEnemy(*closure.faction)) || (closure.global && closure.global->GetValue() != 0.0f)) {
+					return &closure;
 				}
 			}
 			return nullptr;
@@ -300,6 +364,7 @@ namespace NQT
 		{
 			kAvailable,
 			kStarted,     // completed, or an objective has been shown
+			kClosed,      // a `closed` condition holds (faction hostile)
 			kLocked,      // an `after` quest is not completed
 			kGiverGone,   // giver dead or disabled
 			kNotOffered,  // giver near, quest not running (NotOffered)
@@ -313,6 +378,8 @@ namespace NQT
 				return "available"sv;
 			case Status::kStarted:
 				return "started"sv;
+			case Status::kClosed:
+				return "closed (faction hostile)"sv;
 			case Status::kLocked:
 				return "locked"sv;
 			case Status::kGiverGone:
@@ -336,6 +403,10 @@ namespace NQT
 			StartState state;
 			if (IsStarted(a_start, a_shown)) {
 				state.status = Status::kStarted;
+				return state;
+			}
+			if (ClosedBy(a_start)) {
+				state.status = Status::kClosed;
 				return state;
 			}
 			const auto groupDone = [](const std::vector<RE::TESQuest*>& a_group) {
@@ -486,6 +557,26 @@ namespace NQT
 			refused |= status == Status::kNotOffered;
 		}
 		return refused;
+	}
+
+	const StartClosure* FindStartClosure(const RE::TESQuest& a_quest)
+	{
+		const auto          shown = GetQuestsWithObjectives();
+		const StartClosure* first = nullptr;
+		for (const auto& start : starts) {
+			if (start.quest != &a_quest) {
+				continue;
+			}
+			if (IsStarted(start, shown)) {
+				return nullptr;
+			}
+			const auto closure = ClosedBy(start);
+			if (!closure) {
+				return nullptr;
+			}
+			first = first ? first : closure;
+		}
+		return first;
 	}
 
 	std::optional<StartBlocker> FindStartBlocker(const RE::TESQuest& a_quest)

@@ -17,6 +17,9 @@
 #                 Если рядом с квестодателем квест не работает (не заполнился обязательный алиас — чаще
 #                 всего локацию держит другой квест), DLL пишет «временно недоступен» и старт пропускает.
 #                 Кандидаты считает tools/quest_starts_running.py.
+#   closed=K    — старт закрыт, пока фракция K враждебна игроку (изгнали: Братство, Подземка, Институт — после
+#                 выбора другой фракции; Минитмены — после рейдов в Нюка-Мире; Фар-Харбор, Акадия, Дети Атома).
+#                 Ключи и FormID — CLOSED в tools/gen_quest_starts.py. В окне «враждебна фракция …», F1 пропускает.
 # У квеста может быть несколько строк (несколько квестодателей / передатчиков) — выбирается ближайшая доступная.
 #
 # Не включены (решение 2026-09-30, пересмотрено 2026-10-01 по списку ru-вики — полный разбор с причинами:
@@ -70,18 +73,18 @@ DN015                   Fallout4.esm|028FAD  running             # Cambridge Pol
 DN049                   Fallout4.esm|0FD4C2                       # Galleria — робот-встречающий
 DN054                   Fallout4.esm|11685B                       # Atom Cats — Зик
 DN079                   Fallout4.esm|03D84A                       # Mystery Meat — Теодор Коллинз
-DN121                   Fallout4.esm|045C35                       # Out of the Fire — Авраам Финч
+DN121                   Fallout4.esm|045C35  closed=minutemen     # Out of the Fire — Авраам Финч
 DN138                   Fallout4.esm|1073F1                       # Pull the Plug — Салли Мэтис
-DN151                   Fallout4.esm|020A4A  running             # Troubled Waters — Супервайзер Уайт (Грейгарден)
+DN151                   Fallout4.esm|020A4A  running  closed=minutemen  # Troubled Waters — Супервайзер Уайт (Грейгарден)
 DN154                   Fallout4.esm|055544  running             # Giddyup 'n Go — Арлен Гласс
 DialogueDrumlinDiner    Fallout4.esm|106A00                       # Order Up — Труди (закусочная «Драмлин»)
-Min00                   Fallout4.esm|01A4D7                       # When Freedom Calls — Престон Гарви (Конкорд)
-MinRecruit03            Fallout4.esm|06D3A2  running             # Returning the Favor — Блейк Абернати
+Min00                   Fallout4.esm|01A4D7  closed=minutemen     # When Freedom Calls — Престон Гарви (Конкорд)
+MinRecruit03            Fallout4.esm|06D3A2  running  closed=minutemen  # Returning the Favor — Блейк Абернати
 
 # --- Содружество: радио (передатчик с радиусом приёма; alias квеста-радио даёт ему имя станции) ---
 # BoS100Radio (start game enabled): BoS100TransmitterScript на алиасе ловит OnPipboyRadioDetection
 # (игрок вошёл в радиус) -> стадия 5 -> BoS100.SetStage(5) -> цель 5. Слушать не обязательно.
-BoS100                  BoS00Transmitter  radio=20000             # Fire Support — военная частота AF95
+BoS100                  BoS00Transmitter  radio=20000  closed=bos  # Fire Support — военная частота AF95
 # MS10b «Выход на поклон» (start game enabled): алиасы Antenna и AntennaWRVR = эти передатчики. По ru-вики квест
 # начинается, когда пойман сигнал радио Тринити-тауэр или радиостанции WRVR, либо при входе в Тринити-тауэр.
 MS10b                   MS10TrinityTowerAntennaRef  radio=20000       # Curtain Call — радио Тринити-тауэр
@@ -117,46 +120,46 @@ FFGoodneighbor06        CompMacCreadyRef                          # Talk to MacC
 FFGoodneighbor07        Fallout4.esm|022615  after=MS16           # Recruiting Hancock — Хэнкок (после «Раскопок» на стороне Фаренгейт)
 
 # --- Братство Стали (побочные) ---
-BoSM01                  Fallout4.esm|05DE4D  after=BoS101         # The Lost Patrol — паладин Данс
-BoSM02                  Fallout4.esm|01CC15  after=BoSM01,BoS202  # Duty or Dishonor — капитан Келс (Придвен)
-BoSM04                  Fallout4.esm|01CC15  after=BoSM02,BoS301  # A Loose End — капитан Келс
-DLC03Acadia_BoS         Fallout4.esm|01CC15  after=DLC03MQ03,BoS201   # Search and Destroy — капитан Келс (после разговора с ДиМА)
+BoSM01                  Fallout4.esm|05DE4D  after=BoS101  closed=bos  # The Lost Patrol — паладин Данс
+BoSM02                  Fallout4.esm|01CC15  after=BoSM01,BoS202  closed=bos  # Duty or Dishonor — капитан Келс (Придвен)
+BoSM04                  Fallout4.esm|01CC15  after=BoSM02,BoS301  closed=bos  # A Loose End — капитан Келс
+DLC03Acadia_BoS         Fallout4.esm|01CC15  after=DLC03MQ03,BoS201  closed=bos  # Search and Destroy — капитан Келс (после разговора с ДиМА)
 
 # --- Подземка (побочные; штаб) ---
-RRM01                   Fallout4.esm|050950  after=RR102          # Boston After Dark — доктор Каррингтон
-RRM02                   Fallout4.esm|0508ED  after=RRM01,RRR01b   # Memory Interrupted — Дездемона
-RRR01a                  Fallout4.esm|050950  after=RRM01          # Butcher's Bill — доктор Каррингтон
-RRR01b                  Fallout4.esm|050950  after=RRR01a         # Butcher's Bill 2 — доктор Каррингтон
-RRR04                   Fallout4.esm|0508EC  after=RRM01,MQ206    # Mercer Safehouse — ПАМ
-RRR06                   Fallout4.esm|0678CF  after=RRM01,RRR01a,RRR01b,RRR04   # Randolph Safehouse — Барабанщик
-RRR08                   Fallout4.esm|0508ED  after=MQ302RR|MQ302Min running  # To the Mattresses — Дездемона
+RRM01                   Fallout4.esm|050950  after=RR102  closed=railroad  # Boston After Dark — доктор Каррингтон
+RRM02                   Fallout4.esm|0508ED  after=RRM01,RRR01b  closed=railroad  # Memory Interrupted — Дездемона
+RRR01a                  Fallout4.esm|050950  after=RRM01  closed=railroad  # Butcher's Bill — доктор Каррингтон
+RRR01b                  Fallout4.esm|050950  after=RRR01a  closed=railroad  # Butcher's Bill 2 — доктор Каррингтон
+RRR04                   Fallout4.esm|0508EC  after=RRM01,MQ206  closed=railroad  # Mercer Safehouse — ПАМ
+RRR06                   Fallout4.esm|0678CF  after=RRM01,RRR01a,RRR01b,RRR04  closed=railroad  # Randolph Safehouse — Барабанщик
+RRR08                   Fallout4.esm|0508ED  after=MQ302RR|MQ302Min running  closed=railroad  # To the Mattresses — Дездемона
 
 # --- Институт (побочные; в Институт только телепорт — inside) ---
-InstM01                 Fallout4.esm|061C36  after=MQ207  inside  # Building a Better Crop — Айзек Карлин
-InstM02                 Fallout4.esm|061C37  after=Inst303  inside    # Plugging a Leak — Джастин Айо
-InstM03                 Fallout4.esm|061C3B  after=Inst303  inside    # A House Divided — Ньютон Оберли
+InstM01                 Fallout4.esm|061C36  after=MQ207  inside  closed=institute  # Building a Better Crop — Айзек Карлин
+InstM02                 Fallout4.esm|061C37  after=Inst303  inside  closed=institute  # Plugging a Leak — Джастин Айо
+InstM03                 Fallout4.esm|061C3B  after=Inst303  inside  closed=institute  # A House Divided — Ньютон Оберли
 # Мосли в ESM — выключенная заготовка в мире Фар-Харбора, в Институт его ставит скрипт: только inside.
-DLC03Acadia_Institute   DLCCoast.esm|02F3F7  after=DLC03MQ03,MQ207  inside   # Forbidden Knowledge — доктор Мосли
+DLC03Acadia_Institute   DLCCoast.esm|02F3F7  after=DLC03MQ03,MQ207  inside  closed=institute  # Forbidden Knowledge — доктор Мосли
 
 # --- Фар-Харбор ---
-DLC03FarHarborFF01      DLCCoast.esm|005C96                       # Blood Tide — Кэсси Далтон
-DLC03FarHarborFF02      DLCCoast.esm|005C82                       # Safe Passage — капитан Эйвери
-DLC03FarHarborFF03a     DLCCoast.esm|005C92                       # Hull Breach — Марина
-DLC03FarHarborS01       DLCCoast.esm|005CA0                       # The Hold Out — Митч
-DLC03FarHarborS02       DLCCoast.esm|005C84                       # Turn Back the Fog — Малышка Берта
-DLC03FarHarborS03       DLCCoast.esm|005C92  after=DLC03FarHarborFF03a   # The Great Hunt — Марина
-DLC03FarHarborM01       DLCCoast.esm|005C98  after=DLC03FarHarborM02     # Rite of Passage — Тедди Райт
-DLC03AcadiaM01          DLCCoast.esm|005426                       # The Arrival — Чейз (Акадия)
-DLC03AcadiaM02          DLCCoast.esm|005429                       # Hunting the Hunter — Деджен
-DLC03AcadiaM03          DLCCoast.esm|00542A                       # Data Recovery — Фарадей
-DLC03AcadiaM04          DLCCoast.esm|005428                       # The Price of Memory — Ког
-DLC03CoA_FFNucleus01    DLCCoast.esm|00447E                       # The Trial of Brother Devin — зелот Уэр (Ядро)
-DLC03CoA_FFNucleus02    DLCCoast.esm|004485                       # Witch Hunt — верховный исповедник Тектус
-DLC03CoA_FFNucleus03    DLCCoast.esm|004479                       # Ablutions — сестра Май
-DLC03AtomM01            DLCCoast.esm|00449D  after=DLC03MQ03      # Visions in the Fog — великий зилот Рихтер
-DLC03AtomM02            DLCCoast.esm|00449D  after=DLC03AtomM01   # The Heretic — великий зилот Рихтер
-DLC03FarHarborFF03b     DLCCoast.esm|005C92  after=DLC03FarHarborFF03a,DLC03FarHarborM01   # Hull Breach 2 — Марина
-DLC03FarHarborFF03c     DLCCoast.esm|005C92  after=DLC03FarHarborFF03b   # Hull Breach 3 — Марина
+DLC03FarHarborFF01      DLCCoast.esm|005C96  closed=farharbor     # Blood Tide — Кэсси Далтон
+DLC03FarHarborFF02      DLCCoast.esm|005C82  closed=farharbor     # Safe Passage — капитан Эйвери
+DLC03FarHarborFF03a     DLCCoast.esm|005C92  closed=farharbor     # Hull Breach — Марина
+DLC03FarHarborS01       DLCCoast.esm|005CA0  closed=farharbor     # The Hold Out — Митч
+DLC03FarHarborS02       DLCCoast.esm|005C84  closed=farharbor     # Turn Back the Fog — Малышка Берта
+DLC03FarHarborS03       DLCCoast.esm|005C92  after=DLC03FarHarborFF03a  closed=farharbor  # The Great Hunt — Марина
+DLC03FarHarborM01       DLCCoast.esm|005C98  after=DLC03FarHarborM02  closed=farharbor  # Rite of Passage — Тедди Райт
+DLC03AcadiaM01          DLCCoast.esm|005426  closed=acadia        # The Arrival — Чейз (Акадия)
+DLC03AcadiaM02          DLCCoast.esm|005429  closed=acadia        # Hunting the Hunter — Деджен
+DLC03AcadiaM03          DLCCoast.esm|00542A  closed=acadia        # Data Recovery — Фарадей
+DLC03AcadiaM04          DLCCoast.esm|005428  closed=acadia        # The Price of Memory — Ког
+DLC03CoA_FFNucleus01    DLCCoast.esm|00447E  closed=atom          # The Trial of Brother Devin — зелот Уэр (Ядро)
+DLC03CoA_FFNucleus02    DLCCoast.esm|004485  closed=atom          # Witch Hunt — верховный исповедник Тектус
+DLC03CoA_FFNucleus03    DLCCoast.esm|004479  closed=atom          # Ablutions — сестра Май
+DLC03AtomM01            DLCCoast.esm|00449D  after=DLC03MQ03  closed=atom  # Visions in the Fog — великий зилот Рихтер
+DLC03AtomM02            DLCCoast.esm|00449D  after=DLC03AtomM01  closed=atom  # The Heretic — великий зилот Рихтер
+DLC03FarHarborFF03b     DLCCoast.esm|005C92  after=DLC03FarHarborFF03a,DLC03FarHarborM01  closed=farharbor  # Hull Breach 2 — Марина
+DLC03FarHarborFF03c     DLCCoast.esm|005C92  after=DLC03FarHarborFF03b  closed=farharbor  # Hull Breach 3 — Марина
 
 # --- Нюка-Мир ---
 DLC04MS01               DLCNukaWorld.esm|013A50                   # Cappy in a Haystack — Сьерра Петровита

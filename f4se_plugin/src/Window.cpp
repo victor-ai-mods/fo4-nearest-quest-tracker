@@ -42,6 +42,7 @@ namespace NQT::Window
 			kNotStarted = 3,
 			kCompleted = 4,
 			kNotOffered = 5,  // IsStartNotOffered: the giver is near but does not offer it now
+			kClosed = 6,      // FindStartClosure: its faction is hostile (kicked the player out)
 		};
 
 		// Row distances that are not distances.
@@ -229,10 +230,16 @@ namespace NQT::Window
 			for (const auto& entry : rest) {
 				auto row = builder.Row(Kind::kNone, entry.quest, 0, entry.name, PluginWorld(*entry.quest), kNoDistance,
 					false, excluded.contains(entry.quest));
+				const auto closure = entry.completed ? nullptr : FindStartClosure(*entry.quest);
 				const auto state = entry.completed           ? QuestState::kCompleted :
+				                   closure                   ? QuestState::kClosed :
 				                   IsStartNotOffered(*entry.quest) ? QuestState::kNotOffered :
 				                                                     QuestState::kNotStarted;
 				row.SetMember("state", GFxValue(std::to_underlying(state)));
+				if (closure) {
+					row.SetMember("closedRu", builder.String(closure->ru));
+					row.SetMember("closedEn", builder.String(closure->en));
+				}
 				if (state == QuestState::kNotOffered) {
 					if (const auto blocker = FindStartBlocker(*entry.quest)) {
 						// Pip-Boy name only while it shows an objective (a radiant at its first stage may not): else its own name.

@@ -4,6 +4,15 @@
 
 namespace NQT
 {
+	// QuestStart::closed: the start is closed while the faction is hostile to the player or the global is not 0.
+	struct StartClosure
+	{
+		RE::TESFaction*      faction{ nullptr };
+		RE::TESGlobal*       global{ nullptr };
+		std::string          ru;  // names the faction in the window / notifications
+		std::string          en;
+	};
+
 	// A place where a quest not started yet can be picked up (QuestStarts.json, stage 3a). A quest may
 	// have several (other givers, several radio transmitters, one per objective).
 	struct QuestStart
@@ -19,6 +28,7 @@ namespace NQT
 		std::uint32_t              anchorID{ 0 };  // persistent ref at pos (outer door or map marker)
 		float                      radioRadius{ 0.0f };  // > 0: the ref is a radio transmitter heard within this radius
 		bool                       running{ false };  // the giver offers the quest only while it is running (see NotOffered)
+		std::vector<StartClosure>  closed;          // any of them holds -> the start is closed (faction kicked the player out)
 		std::string                name;           // for the log
 	};
 
@@ -46,6 +56,10 @@ namespace NQT
 	// running quest (FindStartBlocker; then wherever the player is), or the player is at the giver - kept while the
 	// player stays in that location, leaving it gives the quest a new chance.
 	[[nodiscard]] bool IsStartNotOffered(const RE::TESQuest& a_quest);
+
+	// Why a quest cannot be started: every start point it has is closed (QuestStart::closed) - the closure that
+	// holds for its first start; nullptr if a start is not closed (or the quest is started or completed).
+	[[nodiscard]] const StartClosure* FindStartClosure(const RE::TESQuest& a_quest);
 
 	// Why a quest may not start: a location one of its required aliases must hold (specific location, no
 	// "Allow Reserved") is held by a reserving location alias of another running quest - the usual case

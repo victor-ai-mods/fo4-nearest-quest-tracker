@@ -751,7 +751,13 @@ Function PollStart()
     Int markerID = NQT_Native.GetStartMarkerID(ShownStart)
     If markerID == 0
         NQT_Native.Log("PollStart: " + ShownStart + " started or no longer available")
-        If NQT_Native.IsStartNotOffered(ShownStart)
+        String closedBy = NQT_Native.GetStartClosedBy(ShownStart, IsRussian())
+        If closedBy != ""
+            Bool russianClosed = IsRussian()
+            String closedName = StartName(ShownStart, russianClosed)
+            Notify(russianClosed, "«" + closedName + "» недоступен: враждебна фракция «" + closedBy + "»", \
+                closedName + " is unavailable: " + closedBy + " is hostile")
+        ElseIf NQT_Native.IsStartNotOffered(ShownStart)
             Bool russian = IsRussian()
             String name = StartName(ShownStart, russian)
             Quest holder = Game.GetForm(NQT_Native.GetStartBlocker(ShownStart)) as Quest

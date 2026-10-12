@@ -147,6 +147,13 @@ namespace NQT::Papyrus
 			return blocker ? std::string{ RE::TESFullName::GetFullName(*blocker->location) } : std::string{};
 		}
 
+		// Name of the hostile faction that closes every start of a_quest (FindStartClosure); "" if none.
+		std::string GetStartClosedBy(std::monostate, RE::TESQuest* a_quest, bool a_russian)
+		{
+			const auto closure = a_quest ? FindStartClosure(*a_quest) : nullptr;
+			return closure ? (a_russian ? closure->ru : closure->en) : std::string{};
+		}
+
 		bool HasQuestStart(std::monostate, RE::TESQuest* a_quest)
 		{
 			return a_quest && FindQuestStart(*a_quest);
@@ -327,6 +334,7 @@ namespace NQT::Papyrus
 		a_vm->BindNativeMethod(kScript, "GetStartMarkerID"sv, GetStartMarkerID, true);
 		a_vm->BindNativeMethod(kScript, "IsStartNotOffered"sv, IsStartNotOffered, true);
 		a_vm->BindNativeMethod(kScript, "GetStartBlocker"sv, GetStartBlocker, true);
+		a_vm->BindNativeMethod(kScript, "GetStartClosedBy"sv, GetStartClosedBy, true);
 		a_vm->BindNativeMethod(kScript, "GetStartBlockedPlace"sv, GetStartBlockedPlace, true);
 		a_vm->BindNativeMethod(kScript, "HasQuestStart"sv, HasQuestStart, true);
 		a_vm->BindNativeMethod(kScript, "GetStartName"sv, GetStartName, true);

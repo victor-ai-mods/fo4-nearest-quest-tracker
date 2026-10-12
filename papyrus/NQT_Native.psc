@@ -32,6 +32,10 @@ Bool Function IsStartNotOffered(Quest akQuest) native global
 ; Why akQuest may not start: FormID of the running quest whose alias holds (reserves) a location akQuest needs,
 ; 0 if none is found; GetStartBlockedPlace - the name of that location.
 Int Function GetStartBlocker(Quest akQuest) native global
+
+; Every start point of akQuest is closed because its faction is hostile to the player (kicked out): the faction's
+; name; "" if not.
+String Function GetStartClosedBy(Quest akQuest, Bool abRussian) native global
 String Function GetStartBlockedPlace(Quest akQuest) native global
 
 ; True if QuestStarts.json (or QuestStarts-user.json) has a start point for akQuest.

@@ -35,6 +35,19 @@ ROOT_WORLDS = {'Fallout4.esm|00003C', 'DLCCoast.esm|000B0F', 'DLCNukaWorld.esm|0
 MAP_MARKER = 'Fallout4.esm|000010'
 PERSISTENT, DISABLED = 0x400, 0x800
 
+# closed=<ключ>: старт закрыт, пока фракция враждебна игроку (изгнание: Faction.SetEnemy с PlayerFaction или
+# SetPlayerEnemy — DLL проверяет и то и другое) или глобал != 0. Имена — для окна и уведомлений.
+CLOSED = {
+    'bos':       ([('faction', 'Fallout4.esm|05DE41')], 'Братство Стали', 'Brotherhood of Steel'),
+    'railroad':  ([('faction', 'Fallout4.esm|0994F6')], 'Подземка', 'Railroad'),
+    'institute': ([('faction', 'Fallout4.esm|05E558')], 'Институт', 'Institute'),
+    'minutemen': ([('faction', 'Fallout4.esm|068043')], 'Минитмены', 'Minutemen'),
+    'farharbor': ([('faction', 'DLCCoast.esm|005C7E')], 'Фар-Харбор', 'Far Harbor'),
+    'acadia':    ([('faction', 'DLCCoast.esm|00463D')], 'Акадия', 'Acadia'),
+    # DLC03CoA_Kickout ставит глобал DLC03CoA_PlayerKickedOutofCoA
+    'atom':      ([('faction', 'DLCCoast.esm|004462'), ('global', 'DLCCoast.esm|018061')], 'Дети Атома', 'Children of Atom'),
+}
+
 USER_EXAMPLE = {
     '_comment': [
         'Nearest Quest Tracker: your own quest start points (for quests from other mods, or to fix a vanilla one).',
@@ -50,6 +63,9 @@ USER_EXAMPLE = {
         '  "stage"  - optional: the quest counts as started once this stage is done (for quests that show no objective).',
         '  "radio"  - optional: "ref" is a radio transmitter and the quest starts when its signal is picked up;',
         '             the value is the reception radius in game units (distances are measured to its edge).',
+        '  "closed" - optional: the start is closed while one of these holds, [{"faction": "Plugin.esp|ID", "en": "name"},',
+        '             {"global": "Plugin.esp|ID", "en": "name"}]: the faction is hostile to the player (kicked out), or the',
+        '             global is not 0; "en"/"ru" name it in the window ("hostile: <name>").',
         '  "running" - optional, true: the giver offers the quest only while the quest is already running (its dialogue',
         '             belongs to the quest itself; the game starts it in the background, e.g. on entering a location).',
         '             Near such a giver a quest that is not running is shown as "not offered now" and skipped.',
@@ -74,7 +90,7 @@ def parse_src(path):
             if not parts:
                 continue
             e = {'quest': parts[0], 'ref': parts[1], 'after': [], 'radio': None, 'objective': None, 'stage': None,
-                 'inside': False, 'running': False, 'comment': comment.strip(), 'line': n}
+                 'inside': False, 'running': False, 'closed': [], 'comment': comment.strip(), 'line': n}
             for p in parts[2:]:
                 k, _, v = p.partition('=')
                 if k == 'after':
@@ -87,6 +103,11 @@ def parse_src(path):
                     e['inside'] = True
                 elif p == 'running':
                     e['running'] = True
+                elif k == 'closed':
+                    for key in v.split(','):
+                        if key not in CLOSED:
+                            raise SystemExit('%s:%d: неизвестный closed=%s (есть: %s)' % (path, n, key, ', '.join(CLOSED)))
+                        e['closed'].append(key)
                 else:
                     raise SystemExit('%s:%d: неизвестное поле %r' % (path, n, p))
             out.append(e)
@@ -195,6 +216,9 @@ def main():
             entry['radio'] = round(e['radio'])
         if e['running']:
             entry['running'] = True
+        if e['closed']:
+            entry['closed'] = [{kind: form, 'ru': CLOSED[key][1], 'en': CLOSED[key][2]}
+                               for key in e['closed'] for kind, form in CLOSED[key][0]]
         where = 'только рядом (inside)'
         if not e['inside']:
             # Квестодатель, к которому нет пути через двери (Институт — только телепорт), — ошибка; такие
