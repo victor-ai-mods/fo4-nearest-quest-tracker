@@ -137,9 +137,10 @@ package
 		private var searchHint:TextField;
 		private var searchText:Array = ["", ""];
 		private var typing:Boolean = false;
-		// Esc закрывает окно на отпускании (ProcessUserEvent "Cancel"), как ванильные меню: тест — закрытие на нажатии
-		// (KeyDown 27) отдавало отпускание игре, и та открывала меню паузы. escUpFrames — запасное закрытие, если
-		// "Cancel" не пришёл; escEndedTyping — этот Esc сбросил поиск и окно не закрывает.
+		// Esc закрывает окно на отпускании, а не на нажатии: тест — закрытие на нажатии (KeyDown 27) отдавало отпускание
+		// игре, и та открывала меню паузы. Тест 2026-10-12: клавиатурный Esc в наше окно "Cancel" не присылает — закрывает
+		// escUpFrames (10 кадров после KeyUp 27), меню паузы не появляется; "Cancel" (B геймпада) закрывает сразу.
+		// escEndedTyping — этот Esc сбросил поиск и окно не закрывает.
 		private var escUpFrames:int = 0;
 		private var escEndedTyping:Boolean = false;
 		private var typingStartedAt:int = 0;
