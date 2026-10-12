@@ -751,6 +751,11 @@ Function PollStart()
     Int markerID = NQT_Native.GetStartMarkerID(ShownStart)
     If markerID == 0
         NQT_Native.Log("PollStart: " + ShownStart + " started or no longer available")
+        If NQT_Native.IsStartNotOffered(ShownStart)
+            Bool russian = IsRussian()
+            String name = StartName(ShownStart, russian)
+            Notify(russian, "«" + name + "» сейчас не предлагают — загляните позже", name + " is not offered right now - come back later")
+        EndIf
         ClearStart()
         If NQT_AutoTrack.GetValue() != 0.0
             Track(true)

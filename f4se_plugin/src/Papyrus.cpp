@@ -128,6 +128,11 @@ namespace NQT::Papyrus
 			return start ? start : FindQuestStart(*a_quest);
 		}
 
+		bool IsStartNotOffered(std::monostate, RE::TESQuest* a_quest)
+		{
+			return a_quest && NQT::IsStartNotOffered(*a_quest);
+		}
+
 		bool HasQuestStart(std::monostate, RE::TESQuest* a_quest)
 		{
 			return a_quest && FindQuestStart(*a_quest);
@@ -306,6 +311,7 @@ namespace NQT::Papyrus
 		a_vm->BindNativeMethod(kScript, "GetTrackedQuestList"sv, GetTrackedQuestList, true);
 		a_vm->BindNativeMethod(kScript, "FindNearestTarget"sv, FindNearestTarget, true);
 		a_vm->BindNativeMethod(kScript, "GetStartMarkerID"sv, GetStartMarkerID, true);
+		a_vm->BindNativeMethod(kScript, "IsStartNotOffered"sv, IsStartNotOffered, true);
 		a_vm->BindNativeMethod(kScript, "HasQuestStart"sv, HasQuestStart, true);
 		a_vm->BindNativeMethod(kScript, "GetStartName"sv, GetStartName, true);
 		a_vm->BindNativeMethod(kScript, "IsRadioStart"sv, IsRadioStart, true);

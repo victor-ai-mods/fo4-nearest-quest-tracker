@@ -62,6 +62,7 @@ package
 		private static const STATE_CAN_START:int = 2;
 		private static const STATE_NOT_STARTED:int = 3;
 		private static const STATE_COMPLETED:int = 4;
+		private static const STATE_NOT_OFFERED:int = 5;  // квестодатель рядом, но квест сейчас не предлагает
 		// Фильтр состояния: невыполненные (по умолчанию), все, в Pip-Boy, можно начать, не начатые, выполненные.
 		private static const STATE_FILTERS:int = 6;
 
@@ -763,7 +764,7 @@ package
 				case 3:
 					return q.state == STATE_CAN_START;
 				case 4:
-					return q.state == STATE_NOT_STARTED;
+					return q.state == STATE_NOT_STARTED || q.state == STATE_NOT_OFFERED;
 				case 5:
 					return q.state == STATE_COMPLETED;
 			}
@@ -1042,6 +1043,8 @@ package
 					return T("можно начать", "can be started");
 				case STATE_NOT_STARTED:
 					return T("не начат", "not started");
+				case STATE_NOT_OFFERED:
+					return T("временно недоступен", "not offered now");
 				case STATE_COMPLETED:
 					return T("выполнен", "completed");
 			}

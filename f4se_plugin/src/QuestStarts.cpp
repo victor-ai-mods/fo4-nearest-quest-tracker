@@ -102,6 +102,7 @@ namespace NQT
 			if (const auto radio = a_entry.find("radio"); radio != a_entry.end() && radio->is_number()) {
 				start.radioRadius = std::max(radio->get<float>(), 1.0f);
 			}
+			start.running = a_entry.value("running", false);
 			return start;
 		}
 
@@ -137,6 +138,58 @@ namespace NQT
 		[[nodiscard]] bool IsCompleted(const RE::TESQuest& a_quest) noexcept
 		{
 			return (a_quest.data.flags >> 1) & 1;
+		}
+
+		// Data flags bit 0: started or starting (GetQuestRunning, OG rva 4C98E0, also wants bit 7 clear and no
+		// promote task, i.e. not still starting).
+		[[nodiscard]] bool IsEnabled(const RE::TESQuest& a_quest) noexcept
+		{
+			return a_quest.data.flags & 1;
+		}
+
+		// Quests whose giver was seen not offering them -> the player's location then (see NotOffered).
+		std::mutex                                                     notOfferedLock;
+		std::unordered_map<const RE::TESQuest*, const RE::BGSLocation*> notOffered;
+
+		// Same place: the same location, or one inside the other, but not a top-level one (the Commonwealth
+		// holds every location of the world).
+		[[nodiscard]] bool SamePlace(const RE::BGSLocation* a_seen, const RE::BGSLocation* a_here)
+		{
+			if (!a_seen || !a_here) {
+				return false;
+			}
+			return a_seen == a_here || a_seen->IsChild(a_here) || (a_here->parentLoc && a_here->IsChild(a_seen));
+		}
+
+		// A `running` start whose quest is not running: its dialogue lives in the quest's own topics, so the
+		// giver has nothing to say about it. Judged only while the giver is loaded near the player (before
+		// that the Story Manager may still start the quest, e.g. on entering the giver's location), then
+		// remembered until the player leaves that place.
+		[[nodiscard]] bool NotOffered(const QuestStart& a_start, const RE::TESObjectREFR* a_live)
+		{
+			const auto              player = RE::PlayerCharacter::GetSingleton();
+			const auto              here = player ? player->currentLocation : nullptr;
+			std::scoped_lock        lock{ notOfferedLock };
+			if (!a_start.running || IsEnabled(*a_start.quest)) {
+				notOffered.erase(a_start.quest);
+				return false;
+			}
+			if (a_live && a_live->Get3D()) {
+				if (notOffered.insert_or_assign(a_start.quest, here).second) {
+					logger::info("start {}: giver loaded, quest not running -> not offered now"sv, a_start.name);
+				}
+				return true;
+			}
+			const auto it = notOffered.find(a_start.quest);
+			if (it == notOffered.end()) {
+				return false;
+			}
+			if (SamePlace(it->second, here)) {
+				return true;
+			}
+			logger::info("start {}: player left the place, the quest may start again"sv, a_start.name);
+			notOffered.erase(it);
+			return false;
 		}
 
 		// TESQuest::IsStageDone (OG rva 5D7370) without its hash table: TESQuestStage +0x18 is the stage
@@ -187,6 +240,7 @@ namespace NQT
 			kStarted,     // completed, or an objective has been shown
 			kLocked,      // an `after` quest is not completed
 			kGiverGone,   // giver dead or disabled
+			kNotOffered,  // giver near, quest not running (NotOffered)
 			kNoMarker,    // nothing in memory to put the marker on
 		};
 
@@ -201,6 +255,8 @@ namespace NQT
 				return "locked"sv;
 			case Status::kGiverGone:
 				return "giver gone"sv;
+			case Status::kNotOffered:
+				return "not offered now"sv;
 			default:
 				return "no marker ref"sv;
 			}
@@ -230,6 +286,10 @@ namespace NQT
 			state.live = LiveRef(a_start.refID);
 			if (state.live && IsGone(*state.live)) {
 				state.status = Status::kGiverGone;
+				return state;
+			}
+			if (NotOffered(a_start, state.live)) {
+				state.status = Status::kNotOffered;
 				return state;
 			}
 			if (state.live) {
@@ -349,6 +409,23 @@ namespace NQT
 		return best;
 	}
 
+	bool IsStartNotOffered(const RE::TESQuest& a_quest)
+	{
+		const auto shown = GetQuestsWithObjectives();
+		bool       refused = false;
+		for (const auto& start : starts) {
+			if (start.quest != &a_quest) {
+				continue;
+			}
+			const auto status = Evaluate(start, shown).status;
+			if (status == Status::kAvailable) {
+				return false;
+			}
+			refused |= status == Status::kNotOffered;
+		}
+		return refused;
+	}
+
 	std::vector<Candidate> CollectStartCandidates()
 	{
 		std::vector<Candidate> result;
@@ -437,9 +514,10 @@ namespace NQT
 		for (const auto& start : starts) {
 			const auto state = Evaluate(start, withObjectives);
 			const auto distance = state.status == Status::kAvailable ? MeasureStart(*player, playerRoot, entries, start, state.live) : std::nullopt;
-			logger::info("  {} {}{}{}: {}, giver {:08X}{}{}, marker {:08X}, root {}{}"sv, DescribeQuest(*start.quest), start.name,
+			logger::info("  {} {}{}{}{}: {}, giver {:08X}{}{}, marker {:08X}, root {}{}"sv, DescribeQuest(*start.quest), start.name,
 				start.objective ? std::format(" (objective {})"sv, *start.objective) : ""s,
 				start.stage ? std::format(" (stage {})"sv, *start.stage) : ""s,
+				start.running ? std::format(" (running: {})"sv, IsEnabled(*start.quest)) : ""s,
 				StatusName(state.status), start.refID, state.live ? " (in memory)"sv : ""sv,
 				start.radioRadius > 0.0f ? std::format(", radio \"{}\" radius {:.0f}"sv, GetStartRadioName(start), start.radioRadius) : ""s,
 				state.markerID, state.live ? DescribeRoot(RootOf(*state.live)) : "-"s,

@@ -18,6 +18,7 @@ namespace NQT
 		std::uint32_t              markerID{ 0 };  // persistent ref in the giver's own cell/world (door out of it)
 		std::uint32_t              anchorID{ 0 };  // persistent ref at pos (outer door or map marker)
 		float                      radioRadius{ 0.0f };  // > 0: the ref is a radio transmitter heard within this radius
+		bool                       running{ false };  // the giver offers the quest only while it is running (see NotOffered)
 		std::string                name;           // for the log
 	};
 
@@ -40,8 +41,14 @@ namespace NQT
 	// The nearest start point of a_quest that is available now; nullptr if none is.
 	[[nodiscard]] const QuestStart* FindAvailableStart(const RE::TESQuest& a_quest);
 
+	// True if a_quest has no available start point and the player is at a giver who does not offer it now:
+	// a `running` start whose quest is not running (the Story Manager did not start it, e.g. a required alias
+	// did not fill). Kept while the player stays in that location; leaving it gives the quest a new chance.
+	[[nodiscard]] bool IsStartNotOffered(const RE::TESQuest& a_quest);
+
 	// Start points that can be used now: quest not completed, not started yet (see QuestStart::objective
-	// and stage), every `after` group satisfied, the giver not dead or disabled (when it is in memory).
+	// and stage), every `after` group satisfied, the giver not dead or disabled (when it is in memory),
+	// the giver not refusing it (IsStartNotOffered).
 	[[nodiscard]] std::vector<Candidate> CollectStartCandidates();
 
 	// Where the marker for a_start goes right now: the giver itself when it is in memory, else

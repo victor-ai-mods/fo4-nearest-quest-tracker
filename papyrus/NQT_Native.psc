@@ -24,6 +24,11 @@ Int[] Function FindNearestTarget(FormList akExcludedQuests, FormList akExcludedL
 ; giver dead or disabled, a required quest not completed).
 Int Function GetStartMarkerID(Quest akQuest) native global
 
+; True if akQuest has no available start point because its giver is near but does not offer it now: the quest
+; must already be running for the giver to offer it, and the Story Manager has not started it (often another
+; quest holds the location). Stays true while the player stays in that place.
+Bool Function IsStartNotOffered(Quest akQuest) native global
+
 ; True if QuestStarts.json (or QuestStarts-user.json) has a start point for akQuest.
 Bool Function HasQuestStart(Quest akQuest) native global
 

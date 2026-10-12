@@ -12,6 +12,11 @@
 #   stage=N     — квест начат, когда пройдена стадия N (квест без целей в Pip-Boy).
 #   inside      — к ref нет пути через двери (Институт — только телепорт): точки на карте нет, старт
 #                 предлагается, только когда ref загружен рядом с игроком.
+#   running     — квестодатель предлагает квест, только пока квест УЖЕ работает: реплики лежат в топиках
+#                 самого квеста, а запускает его Story Manager (вход в локацию, событие вербовки и т.п.).
+#                 Если рядом с квестодателем квест не работает (не заполнился обязательный алиас — чаще
+#                 всего локацию держит другой квест), DLL пишет «временно недоступен» и старт пропускает.
+#                 Кандидаты считает tools/quest_starts_running.py.
 # У квеста может быть несколько строк (несколько квестодателей / передатчиков) — выбирается ближайшая доступная.
 #
 # Не включены (решение 2026-09-30, пересмотрено 2026-10-01 по списку ru-вики — полный разбор с причинами:
@@ -34,7 +39,7 @@ V81_04                  Fallout4.esm|02A828  after=V81_00_Intro   # Short Storie
 # --- Содружество: Даймонд-Сити ---
 MS13                    Fallout4.esm|002F16                       # Diamond City Blues — Пол Пемброк
 MS14                    Fallout4.esm|002EFD                       # Confidence Man — Вадим Бобров (Дагаут-Инн)
-FFDiamondCity01         Fallout4.esm|002F29                       # Painting the Town — Эббот
+FFDiamondCity01         Fallout4.esm|002F29  running             # Painting the Town — Эббот
 FFDiamondCity03         Fallout4.esm|002CBD                       # Botany Class — Соломон
 FFDiamondCity04         Fallout4.esm|002F03                       # Pool Cleaning — Шэн Каволски
 FFDiamondCity05         Fallout4.esm|002EF9                       # Fly Fishing — доктор Дафф
@@ -61,17 +66,17 @@ MS01                    Fallout4.esm|028653                       # Kid in a Fri
 MS02                    Fallout4.esm|0341FC                       # Here There Be Monsters — Донни Ковальски
 MS11                    Fallout4.esm|0995A3                       # Last Voyage of the U.S.S. Constitution — Наблюдатель
 MS17                    Fallout4.esm|039FD5                       # Human Error — Честный Дэн (у Ковенанта)
-DN015                   Fallout4.esm|028FAD                       # Cambridge Polymer Labs — Молли
+DN015                   Fallout4.esm|028FAD  running             # Cambridge Polymer Labs — Молли
 DN049                   Fallout4.esm|0FD4C2                       # Galleria — робот-встречающий
 DN054                   Fallout4.esm|11685B                       # Atom Cats — Зик
 DN079                   Fallout4.esm|03D84A                       # Mystery Meat — Теодор Коллинз
 DN121                   Fallout4.esm|045C35                       # Out of the Fire — Авраам Финч
 DN138                   Fallout4.esm|1073F1                       # Pull the Plug — Салли Мэтис
-DN151                   Fallout4.esm|020A4A                       # Troubled Waters — Супервайзер Уайт (Грейгарден)
-DN154                   Fallout4.esm|055544                       # Giddyup 'n Go — Арлен Гласс
+DN151                   Fallout4.esm|020A4A  running             # Troubled Waters — Супервайзер Уайт (Грейгарден)
+DN154                   Fallout4.esm|055544  running             # Giddyup 'n Go — Арлен Гласс
 DialogueDrumlinDiner    Fallout4.esm|106A00                       # Order Up — Труди (закусочная «Драмлин»)
 Min00                   Fallout4.esm|01A4D7                       # When Freedom Calls — Престон Гарви (Конкорд)
-MinRecruit03            Fallout4.esm|06D3A2                       # Returning the Favor — Блейк Абернати
+MinRecruit03            Fallout4.esm|06D3A2  running             # Returning the Favor — Блейк Абернати
 
 # --- Содружество: радио (передатчик с радиусом приёма; alias квеста-радио даёт ему имя станции) ---
 # BoS100Radio (start game enabled): BoS100TransmitterScript на алиасе ловит OnPipboyRadioDetection
@@ -106,7 +111,7 @@ MS07a                   Fallout4.esm|0222A4  after=MQ104          # The Disappea
 # Элли его не даёт (2026-10-06: маркер на Элли, она говорила только общие фразы).
 FFDiamondCity02         GenevaREF                                 # Home Plate (Основная база) — Женева, мэрия
 FFDiamondCity11         DocCrockerREF                             # A New You (Новый облик) — Док Крокер
-FFDiamondCity10         Fallout4.esm|0199D5  after=InstKickOut|MQ302BoS|MQ302Min|MQ302RR|BoS304   # In Sheep's Clothing — Дэнни Салливан
+FFDiamondCity10         Fallout4.esm|0199D5  after=InstKickOut|MQ302BoS|MQ302Min|MQ302RR|BoS304 running  # In Sheep's Clothing — Дэнни Салливан
 FFGoodneighbor01        Fallout4.esm|0228A6  after=MQ102          # The Memory Den — Ирма
 FFGoodneighbor06        CompMacCreadyRef                          # Talk to MacCready — Маккриди, «Третий рельс»
 FFGoodneighbor07        Fallout4.esm|022615  after=MS16           # Recruiting Hancock — Хэнкок (после «Раскопок» на стороне Фаренгейт)
@@ -124,7 +129,7 @@ RRR01a                  Fallout4.esm|050950  after=RRM01          # Butcher's Bi
 RRR01b                  Fallout4.esm|050950  after=RRR01a         # Butcher's Bill 2 — доктор Каррингтон
 RRR04                   Fallout4.esm|0508EC  after=RRM01,MQ206    # Mercer Safehouse — ПАМ
 RRR06                   Fallout4.esm|0678CF  after=RRM01,RRR01a,RRR01b,RRR04   # Randolph Safehouse — Барабанщик
-RRR08                   Fallout4.esm|0508ED  after=MQ302RR|MQ302Min   # To the Mattresses — Дездемона
+RRR08                   Fallout4.esm|0508ED  after=MQ302RR|MQ302Min running  # To the Mattresses — Дездемона
 
 # --- Институт (побочные; в Институт только телепорт — inside) ---
 InstM01                 Fallout4.esm|061C36  after=MQ207  inside  # Building a Better Crop — Айзек Карлин

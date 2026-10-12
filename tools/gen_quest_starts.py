@@ -50,6 +50,9 @@ USER_EXAMPLE = {
         '  "stage"  - optional: the quest counts as started once this stage is done (for quests that show no objective).',
         '  "radio"  - optional: "ref" is a radio transmitter and the quest starts when its signal is picked up;',
         '             the value is the reception radius in game units (distances are measured to its edge).',
+        '  "running" - optional, true: the giver offers the quest only while the quest is already running (its dialogue',
+        '             belongs to the quest itself; the game starts it in the background, e.g. on entering a location).',
+        '             Near such a giver a quest that is not running is shown as "not offered now" and skipped.',
         'The quest counts as started (and its start point is no longer shown) once it is completed or any of',
         'its objectives has been shown in the Pip-Boy (unless "objective" or "stage" says otherwise).',
         'A quest can have several entries; entries for a quest in this file replace all QuestStarts.json entries for it.',
@@ -71,7 +74,7 @@ def parse_src(path):
             if not parts:
                 continue
             e = {'quest': parts[0], 'ref': parts[1], 'after': [], 'radio': None, 'objective': None, 'stage': None,
-                 'inside': False, 'comment': comment.strip(), 'line': n}
+                 'inside': False, 'running': False, 'comment': comment.strip(), 'line': n}
             for p in parts[2:]:
                 k, _, v = p.partition('=')
                 if k == 'after':
@@ -82,6 +85,8 @@ def parse_src(path):
                     e[k] = int(v)
                 elif p == 'inside':
                     e['inside'] = True
+                elif p == 'running':
+                    e['running'] = True
                 else:
                     raise SystemExit('%s:%d: неизвестное поле %r' % (path, n, p))
             out.append(e)
@@ -188,6 +193,8 @@ def main():
                 entry[k] = e[k]
         if e['radio'] is not None:
             entry['radio'] = round(e['radio'])
+        if e['running']:
+            entry['running'] = True
         where = 'только рядом (inside)'
         if not e['inside']:
             # Квестодатель, к которому нет пути через двери (Институт — только телепорт), — ошибка; такие

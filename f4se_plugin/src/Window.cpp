@@ -41,6 +41,7 @@ namespace NQT::Window
 			kCanStart = 2,
 			kNotStarted = 3,
 			kCompleted = 4,
+			kNotOffered = 5,  // IsStartNotOffered: the giver is near but does not offer it now
 		};
 
 		// Row distances that are not distances.
@@ -228,7 +229,10 @@ namespace NQT::Window
 			for (const auto& entry : rest) {
 				auto row = builder.Row(Kind::kNone, entry.quest, 0, entry.name, PluginWorld(*entry.quest), kNoDistance,
 					false, excluded.contains(entry.quest));
-				row.SetMember("state", GFxValue(std::to_underlying(entry.completed ? QuestState::kCompleted : QuestState::kNotStarted)));
+				const auto state = entry.completed           ? QuestState::kCompleted :
+				                   IsStartNotOffered(*entry.quest) ? QuestState::kNotOffered :
+				                                                     QuestState::kNotStarted;
+				row.SetMember("state", GFxValue(std::to_underlying(state)));
 				row.SetMember("category", builder.String(entry.category));
 				rows.PushBack(row);
 			}
