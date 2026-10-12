@@ -197,6 +197,7 @@ namespace NQT
 		// Quests whose giver was seen not offering them -> the player's location then (see NotOffered).
 		std::mutex                                                     notOfferedLock;
 		std::unordered_map<const RE::TESQuest*, const RE::BGSLocation*> notOffered;
+		std::unordered_set<const RE::TESQuest*>                          heldBlocked;  // FindStartBlocker found a holder (logged once)
 
 		// Same place: the same location, or one inside the other, but not a top-level one (the Commonwealth
 		// holds every location of the world).
@@ -219,13 +220,25 @@ namespace NQT
 			std::scoped_lock        lock{ notOfferedLock };
 			if (!a_start.running || IsEnabled(*a_start.quest)) {
 				notOffered.erase(a_start.quest);
+				heldBlocked.erase(a_start.quest);
 				return false;
+			}
+			// A place it needs is held by another running quest: it cannot start anywhere (the Story Manager's
+			// next try fails too) until that quest lets go - not offered however far the giver is.
+			if (const auto blocker = FindStartBlocker(*a_start.quest)) {
+				if (heldBlocked.insert(a_start.quest).second) {
+					logger::info("start {}: quest not running, location {:08X} {} held by {} -> not offered anywhere"sv,
+						a_start.name, blocker->location->GetFormID(), RE::TESFullName::GetFullName(*blocker->location),
+						DescribeQuest(*blocker->holder));
+				}
+				return true;
+			}
+			if (heldBlocked.erase(a_start.quest)) {
+				logger::info("start {}: the location it needs is free again"sv, a_start.name);
 			}
 			if (a_live && a_live->Get3D()) {
 				if (notOffered.insert_or_assign(a_start.quest, here).second) {
-					const auto blocker = FindStartBlocker(*a_start.quest);
-					logger::info("start {}: giver loaded, quest not running -> not offered now{}"sv, a_start.name,
-						blocker ? std::format("; location {:08X} {} held by {}"sv, blocker->location->GetFormID(), RE::TESFullName::GetFullName(*blocker->location), DescribeQuest(*blocker->holder)) : ""s);
+					logger::info("start {}: giver loaded, quest not running -> not offered now"sv, a_start.name);
 				}
 				return true;
 			}

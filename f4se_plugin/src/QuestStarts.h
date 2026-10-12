@@ -41,9 +41,10 @@ namespace NQT
 	// The nearest start point of a_quest that is available now; nullptr if none is.
 	[[nodiscard]] const QuestStart* FindAvailableStart(const RE::TESQuest& a_quest);
 
-	// True if a_quest has no available start point and the player is at a giver who does not offer it now:
-	// a `running` start whose quest is not running (the Story Manager did not start it, e.g. a required alias
-	// did not fill). Kept while the player stays in that location; leaving it gives the quest a new chance.
+	// True if a_quest has no available start point because a `running` start's quest is not running (the Story
+	// Manager did not start it, e.g. a required alias did not fill) and either a place it needs is held by another
+	// running quest (FindStartBlocker; then wherever the player is), or the player is at the giver - kept while the
+	// player stays in that location, leaving it gives the quest a new chance.
 	[[nodiscard]] bool IsStartNotOffered(const RE::TESQuest& a_quest);
 
 	// Why a quest may not start: a location one of its required aliases must hold (specific location, no
