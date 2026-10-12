@@ -10,6 +10,8 @@
                                  optional-алиас 0 StartRef; скрипт NQT_MainScript делает ForceRefTo +
                                  SetObjectiveDisplayed, текст цели ставит DLL (NQT_Native.SetObjectiveText)
     GLOB  NQT_IncludeStarts   — 1 = хоткей «Отметить ближайший» учитывает и не начатые квесты (MCM, по умолчанию 0)
+    GLOB  NQT_IncludeRadiant  — 1 = «Отметить ближайшее» выбирает квестодателей радиантных квестов, пока они предлагают
+                                задание (MCM, по умолчанию 1)
     GLOB  NQT_NoSpoilers      — 1 = у маркера старта не писать название квеста (MCM, по умолчанию 0)
     GLOB  NQT_IncludeNoMarker — 1 = хоткей «Отметить ближайший» учитывает и квесты Pip-Boy без маркера, в последнюю
                                 очередь в своём мире (MCM, по умолчанию 0)
@@ -68,7 +70,8 @@ FID_SKIP_OWNED_LOCKED = BASE | 0x80F
 FID_SHOW_QUEST_IN_WINDOW = BASE | 0x810
 FID_OPEN_WINDOW_EFFECT = BASE | 0x811
 FID_WINDOW_ITEM = BASE | 0x812
-NEXT_ID = 0x813
+FID_INCLUDE_RADIANT = BASE | 0x813
+NEXT_ID = 0x814
 
 # Ванильные FormID (Fallout4.esm), как у предмета Explosives Cycler.
 KYWD_OBJECT_TYPE_STIMPAK = 0x000F4AEB   # вкладка «Помощь»
@@ -103,7 +106,8 @@ def build():
                       ('NQT_ExcludedLocationList', FID_EXCLUDED_LOCATIONS),
                       ('NQT_IncludeQuests', FID_INCLUDE_QUESTS), ('NQT_IncludeLocations', FID_INCLUDE_LOCATIONS),
                       ('NQT_IncludeInteriors', FID_INCLUDE_INTERIORS), ('NQT_SkipOwnedLocked', FID_SKIP_OWNED_LOCKED),
-                      ('NQT_ShowQuestInWindow', FID_SHOW_QUEST_IN_WINDOW), ('NQT_WindowItem', FID_WINDOW_ITEM)]:
+                      ('NQT_ShowQuestInWindow', FID_SHOW_QUEST_IN_WINDOW), ('NQT_WindowItem', FID_WINDOW_ITEM),
+                      ('NQT_IncludeRadiant', FID_INCLUDE_RADIANT)]:
         s.prop(name, PROP_OBJECT, fid)
     quest.add(b'VMAD', vmad([s]))
     quest.add(b'FULL', zstring('Nearest Quest Tracker'))
@@ -125,7 +129,8 @@ def build():
              glob(FID_INCLUDE_LOCATIONS, 'NQT_IncludeLocations', 0.0),
              glob(FID_INCLUDE_INTERIORS, 'NQT_IncludeInteriors', 0.0),
              glob(FID_SKIP_OWNED_LOCKED, 'NQT_SkipOwnedLocked', 1.0),
-             glob(FID_SHOW_QUEST_IN_WINDOW, 'NQT_ShowQuestInWindow', 0.0)]
+             glob(FID_SHOW_QUEST_IN_WINDOW, 'NQT_ShowQuestInWindow', 0.0),
+             glob(FID_INCLUDE_RADIANT, 'NQT_IncludeRadiant', 1.0)]
     # Порядок верхних групп — как в Fallout4.esm: GLOB … QUST … FLST.
     quests = [quest,
               marker_quest(FID_START_QUEST, 'NQT_StartMarkerQuest', 'Nearest Quest Tracker: new quest', 'New quest', 'StartRef'),
@@ -204,7 +209,7 @@ def check(path):
     plugin = Plugin(path)
     assert plugin.masters == ['Fallout4.esm'], 'мастера: %r' % (plugin.masters,)
     counts = {sig.decode(): sum(1 for _ in plugin.records(sig)) for sig in (b'GLOB', b'MGEF', b'ALCH', b'QUST', b'FLST')}
-    assert counts == {'GLOB': 12, 'MGEF': 1, 'ALCH': 1, 'QUST': 3, 'FLST': 2}, counts
+    assert counts == {'GLOB': 13, 'MGEF': 1, 'ALCH': 1, 'QUST': 3, 'FLST': 2}, counts
     print('  проверка: мастер один, записи %s' % counts)
 
 

@@ -120,6 +120,15 @@
         },
         {
             "type": "switcher",
+            "text": "$NQT_INCLUDE_RADIANT",
+            "help": "$NQT_INCLUDE_RADIANT_HELP",
+            "valueOptions": {
+                "sourceType": "GlobalValue",
+                "sourceForm": "NearestQuestTracker.esp|813"
+            }
+        },
+        {
+            "type": "switcher",
             "text": "$NQT_NO_SPOILERS",
             "help": "$NQT_NO_SPOILERS_HELP",
             "valueOptions": {

@@ -70,6 +70,8 @@ USER_EXAMPLE = {
         '             (INFO FormIDs). The start is available while the quest of one of those lines is running and the',
         '             line\'s conditions hold for the giver (only the giver-independent ones while the giver is not loaded);',
         '             it ignores "completed" (the quest comes again).',
+        '  "pointers" - optional: misc quests pointing at the giver ["Plugin.esp|ID", ...]; skipped among Pip-Boy quests',
+        '             while the quest cannot start (a needed place held by another quest, hostile faction or giver).',
         '  "giver"  - optional: the giver\'s base NPC; while the ref is not in memory its factions tell whether the giver',
         '             is hostile (then the start is skipped), and a radiant made of aliases is named after it.',
         '  "running" - optional, true: the giver offers the quest only while the quest is already running (its dialogue',
@@ -135,6 +137,17 @@ class Data:
         for k, r in self.refs.items():
             if r.get('door'):
                 self.doors.setdefault(self.space(r), []).append(k)
+
+    def pointers(self, qk):
+        """Misc-квесты-указатели на квест («Поговорить с Эбботом у стены»): EDID = EDID квеста + Misc / _Misc /
+        MiscObj / Pointer / MiscObjectiveHolder (FFDiamondCity01Misc, MS01MiscObj, BoSM01Pointer, …)."""
+        edid = (self.ix['quests'][qk].get('edid') or '').lower()
+        out = []
+        for k, q in self.ix['quests'].items():
+            e = (q.get('edid') or '').lower()
+            if e.startswith(edid) and re.fullmatch(r'_?(misc|miscobj|pointer|miscobjectiveholder)', e[len(edid):]):
+                out.append(k)
+        return out
 
     def space(self, r):
         return r['world'] or r['cell']
@@ -232,6 +245,9 @@ def main():
             plugin = rk.split('|')[0]
             entry['radiant'] = True
             entry['info'] = [x if '|' in x else '%s|%06X' % (plugin, int(x, 16)) for x in e['info']]
+        pointers = data.pointers(qk)
+        if pointers:
+            entry['pointers'] = pointers
         if r['sig'] == 'ACHR' and r.get('base'):
             entry['giver'] = r['base']   # база NPC: имя радианта, враждебность, пока ref не в памяти
         if e['closed']:

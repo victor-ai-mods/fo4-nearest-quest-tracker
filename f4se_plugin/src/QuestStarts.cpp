@@ -112,6 +112,13 @@ namespace NQT
 				}
 			}
 			start.giverBaseID = ResolveRefID(a_entry, "giver");
+			if (const auto pointers = a_entry.find("pointers"); pointers != a_entry.end() && pointers->is_array()) {
+				for (const auto& key : *pointers) {
+					if (const auto quest = ResolveQuest(key)) {
+						start.pointers.push_back(quest);
+					}
+				}
+			}
 			if (start.radiant && start.infos.empty()) {
 				logger::debug("{}: skipped {} (radiant without offer lines loaded)"sv, a_file, start.name);
 				return std::nullopt;
@@ -752,7 +759,19 @@ namespace NQT
 		return std::nullopt;
 	}
 
-	std::vector<Candidate> CollectStartCandidates()
+	bool IsPointerBlocked(const RE::TESQuest& a_quest)
+	{
+		const auto it = std::ranges::find_if(starts, [&](const QuestStart& a_start) {
+			return std::ranges::find(a_start.pointers, &a_quest) != a_start.pointers.end();
+		});
+		if (it == starts.end()) {
+			return false;
+		}
+		const auto& target = *it->quest;
+		return IsStartNotOffered(target) || FindStartClosure(target) || IsStartGiverHostile(target);
+	}
+
+	std::vector<Candidate> CollectStartCandidates(bool a_normal, bool a_radiant)
 	{
 		std::vector<Candidate> result;
 		const auto             player = RE::PlayerCharacter::GetSingleton();
@@ -763,6 +782,9 @@ namespace NQT
 		const auto playerRoot = PlayerRoot(*player);
 		const auto entries = CollectWorldEntries();
 		for (const auto& start : starts) {
+			if (!(start.radiant ? a_radiant : a_normal)) {
+				continue;
+			}
 			const auto state = Evaluate(start, withObjectives);
 			if (state.status != Status::kAvailable) {
 				continue;

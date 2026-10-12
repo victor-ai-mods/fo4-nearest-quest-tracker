@@ -22,6 +22,7 @@ FormList Property NQT_ExcludedList Auto Const Mandatory
 Quest Property NQT_StartQuest Auto Const Mandatory
 {Start marker: objective StartObjective points at alias StartAlias; the DLL sets the objective text.}
 GlobalVariable Property NQT_IncludeStarts Auto Const Mandatory
+GlobalVariable Property NQT_IncludeRadiant Auto Const Mandatory
 {1 = TrackNearest picks start points of quests not started yet (MCM "Pick new quests").}
 GlobalVariable Property NQT_NoSpoilers Auto Const Mandatory
 {1 = the start marker and notifications do not name the quest (MCM).}
@@ -90,6 +91,7 @@ Int Property SourceNoMarker = 4 AutoReadOnly Hidden
 Int Property SourceLocations = 8 AutoReadOnly Hidden
 Int Property SourceInteriors = 16 AutoReadOnly Hidden
 Int Property SourceSkipOwnedLocked = 32 AutoReadOnly Hidden ; with SourceInteriors
+Int Property SourceRadiant = 64 AutoReadOnly Hidden ; givers of radiant quests while they offer one
 ; Target kinds: element 0 of NQT_Native.FindNearestTarget's result, LastKind, ExcludedKinds (KindQuest for both
 ; Pip-Boy kinds there).
 Int Property KindNone = 0 AutoReadOnly Hidden
@@ -682,6 +684,9 @@ Int Function Sources()
     EndIf
     If NQT_IncludeStarts.GetValue() != 0.0
         sources += SourceStarts
+    EndIf
+    If NQT_IncludeRadiant.GetValue() != 0.0
+        sources += SourceRadiant
     EndIf
     If NQT_IncludeLocations.GetValue() != 0.0
         sources += SourceLocations

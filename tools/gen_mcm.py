@@ -35,6 +35,7 @@ UNTRACK_OTHERS_GLOBAL = PLUGIN + '|801'
 NOTIFICATIONS_GLOBAL = PLUGIN + '|802'
 AUTO_TRACK_GLOBAL = PLUGIN + '|804'
 INCLUDE_STARTS_GLOBAL = PLUGIN + '|806'
+INCLUDE_RADIANT_GLOBAL = PLUGIN + '|813'
 NO_SPOILERS_GLOBAL = PLUGIN + '|807'
 INCLUDE_NO_MARKER_GLOBAL = PLUGIN + '|808'
 ALL_LOCATIONS_GLOBAL = PLUGIN + '|80A'
@@ -93,6 +94,9 @@ STRINGS = {
         'INCLUDE_STARTS': 'Pick new quests',
         'INCLUDE_STARTS_HELP': 'Places where quests you have not started yet begin (quest givers). The marker goes '
                                'away once the quest starts.',
+        'INCLUDE_RADIANT': 'Pick radiant quests',
+        'INCLUDE_RADIANT_HELP': 'Givers of repeatable quests (Preston Garvey, Proctor Quinlan, PAM...) while they have '
+                                'a task to give right now.',
         'NO_SPOILERS': 'No spoilers',
         'NO_SPOILERS_HELP': 'The marker of a new quest does not say which quest it is.',
         'INCLUDE_LOCATIONS': 'Pick undiscovered locations',
@@ -172,6 +176,9 @@ STRINGS = {
         'INCLUDE_STARTS': 'Выбирать новые квесты',
         'INCLUDE_STARTS_HELP': 'Места, где начинаются ещё не начатые квесты (квестодатели). Маркер пропадает, когда '
                                'квест начат.',
+        'INCLUDE_RADIANT': 'Выбирать радиантные квесты',
+        'INCLUDE_RADIANT_HELP': 'Квестодатели повторяемых квестов (Престон Гарви, проктор Квинлан, ПАМ…), пока у них '
+                                'есть задание для вас.',
         'NO_SPOILERS': 'Без спойлеров',
         'NO_SPOILERS_HELP': 'Маркер нового квеста не называет, что это за квест.',
         'INCLUDE_LOCATIONS': 'Выбирать неоткрытые локации',
@@ -260,6 +267,7 @@ def config():
         global_switcher('INCLUDE_QUESTS', INCLUDE_QUESTS_GLOBAL),
         global_switcher('INCLUDE_NO_MARKER', INCLUDE_NO_MARKER_GLOBAL),
         global_switcher('INCLUDE_STARTS', INCLUDE_STARTS_GLOBAL),
+        global_switcher('INCLUDE_RADIANT', INCLUDE_RADIANT_GLOBAL),
         global_switcher('NO_SPOILERS', NO_SPOILERS_GLOBAL, 'OnNoSpoilersChanged'),
         global_switcher('INCLUDE_LOCATIONS', INCLUDE_LOCATIONS_GLOBAL),
         global_switcher('ALL_LOCATIONS', ALL_LOCATIONS_GLOBAL),

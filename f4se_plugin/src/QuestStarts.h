@@ -32,6 +32,7 @@ namespace NQT
 		bool                       radiant{ false };  // repeatable: offered while a line in `infos` would be said (see Offered)
 		std::vector<std::uint32_t> infos;           // radiant: the giver's lines offering the quest (TESTopicInfo FormIDs)
 		std::uint32_t              giverBaseID{ 0 };  // the giver's base NPC: hostility and radiant name while the ref is not loaded
+		std::vector<RE::TESQuest*> pointers;        // misc quests pointing at the giver ("Talk to Abbot at the wall")
 		std::string                name;           // for the log
 	};
 
@@ -80,7 +81,11 @@ namespace NQT
 	// Start points that can be used now: quest not completed, not started yet (see QuestStart::objective
 	// and stage), every `after` group satisfied, the giver not dead or disabled (when it is in memory),
 	// the giver not refusing it (IsStartNotOffered).
-	[[nodiscard]] std::vector<Candidate> CollectStartCandidates();
+	[[nodiscard]] std::vector<Candidate> CollectStartCandidates(bool a_normal, bool a_radiant);
+
+	// True if a_quest is a pointer quest (QuestStart::pointers) of a quest that cannot start now: its starts are
+	// blocked (a needed place held by another quest, hostile faction or giver) - the pointer leads nowhere.
+	[[nodiscard]] bool IsPointerBlocked(const RE::TESQuest& a_quest);
 
 	// Where the marker for a_start goes right now: the giver itself when it is in memory, else
 	// the door of its cell, else the outer anchor. 0 if the start is no longer available.

@@ -30,6 +30,7 @@ namespace NQT::Papyrus
 		constexpr std::int32_t kSourceLocations = 8;  // map markers not discovered yet
 		constexpr std::int32_t kSourceInteriors = 16; // interiors never entered
 		constexpr std::int32_t kSourceSkipOwnedLocked = 32;  // with kSourceInteriors: skip locked doors that are a crime to pick
+		constexpr std::int32_t kSourceRadiant = 64;   // givers of radiant quests while they offer one
 
 		// First element of FindNearestTarget's result.
 		enum class TargetKind : std::int32_t
@@ -78,12 +79,17 @@ namespace NQT::Papyrus
 			std::vector<Candidate> candidates;
 			if (a_sources & kSourceQuests) {
 				candidates = CollectQuestCandidates();
+				// A pointer quest ("Talk to Abbot at the wall") whose quest cannot start now leads nowhere.
+				std::erase_if(candidates, [](const Candidate& a_candidate) {
+					return a_candidate.quest && IsPointerBlocked(*a_candidate.quest);
+				});
 				if (a_sources & kSourceNoMarker) {
 					std::ranges::move(CollectNoMarkerCandidates(candidates), std::back_inserter(candidates));
 				}
 			}
-			if (a_sources & kSourceStarts) {
-				std::ranges::move(CollectStartCandidates(), std::back_inserter(candidates));
+			if (a_sources & (kSourceStarts | kSourceRadiant)) {
+				std::ranges::move(CollectStartCandidates((a_sources & kSourceStarts) != 0, (a_sources & kSourceRadiant) != 0),
+					std::back_inserter(candidates));
 			}
 			if (a_sources & kSourceLocations) {
 				std::ranges::move(CollectLocationCandidates(a_allLocations), std::back_inserter(candidates));

@@ -187,7 +187,10 @@ namespace NQT::Window
 
 			auto candidates = CollectQuestCandidates();
 			std::ranges::move(CollectNoMarkerCandidates(candidates), std::back_inserter(candidates));
-			std::ranges::move(CollectStartCandidates(), std::back_inserter(candidates));
+			std::erase_if(candidates, [](const Candidate& a_candidate) {
+				return a_candidate.quest && IsPointerBlocked(*a_candidate.quest);
+			});
+			std::ranges::move(CollectStartCandidates(true, true), std::back_inserter(candidates));
 			SortByTrackOrder(candidates);
 
 			// A quest with several start points: its nearest one (the first in track order).
