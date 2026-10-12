@@ -131,7 +131,8 @@ package
 		private static const SEARCH_H:Number = 34;
 		private var searchBox:Sprite;
 		private var searchBack:Shape;
-		private var searchField:TextField;
+		private var searchField:TextField;     // поле ввода — прозрачное, только принимает буквы
+		private var searchShown:TextField;     // что видно: Scaleform рисует буквы поля ввода квадратиками
 		private var searchHint:TextField;
 		private var searchText:Array = ["", ""];
 		private var typing:Boolean = false;
@@ -1299,7 +1300,14 @@ package
 			searchField.mouseEnabled = true;
 			searchField.maxChars = 40;
 			searchField.addEventListener(Event.CHANGE, OnSearchChange);
+			// Тест: набранное в поле ввода рисуется квадратиками и setTextFormat не помогает — поле прозрачное,
+			// а текст показывает обычное поле (SetText, как все надписи окна).
+			searchField.alpha = 0;
 			searchBox.addChild(searchField);
+			searchShown = MakeField(18, TextFormatAlign.LEFT, SEARCH_W - 16, false);
+			searchShown.x = 8;
+			searchShown.y = (SEARCH_H - 28) / 2;
+			searchBox.addChild(searchShown);
 			searchBox.buttonMode = true;
 			searchBox.addEventListener(MouseEvent.CLICK, OnSearchClick);
 			panel.addChild(searchBox);
@@ -1571,6 +1579,7 @@ package
 			{
 				SetText(searchField, searchText[tab]);
 			}
+			SetTail(searchShown, searchField.text + (typing ? "|" : ""));
 			SetText(searchHint, T("Поиск по названию", "Search by name"));
 			searchHint.visible = searchField.text == "";
 		}
@@ -1650,9 +1659,12 @@ package
 				searchField.setSelection(typedBefore.length, typedBefore.length);
 				return;
 			}
-			// Набранный текст приходит без шрифта ($MAIN_Font из defaultTextFormat не применяется сам, см. SetText) —
-			// иначе вместо букв квадратики.
-			searchField.setTextFormat(searchField.defaultTextFormat);
+			var codes:Array = [];
+			for (var i:int = 0; i < t.length; i++)
+			{
+				codes.push(t.charCodeAt(i).toString(16));
+			}
+			Log("search: text '" + t + "' codes " + codes.join(" "));
 			searchText[tab] = searchField.text;
 			scroll = 0;
 			listIndex = 0;
@@ -1749,6 +1761,19 @@ package
 			var fmt:TextFormat = tf.defaultTextFormat;
 			tf.text = s != null ? s : "";
 			tf.setTextFormat(fmt);
+		}
+
+		// Как SetCell, но не влезает — видно конец («…» в начале): так виден набираемый текст.
+		private static function SetTail(tf:TextField, s:String):void
+		{
+			SetText(tf, s);
+			var limit:Number = tf.width - 6;
+			var cut:int = 0;
+			while (tf.textWidth > limit && cut < s.length)
+			{
+				cut++;
+				SetText(tf, "…" + s.substr(cut));
+			}
 		}
 
 		// Текст ячейки; не влезает в ширину — обрезается с «…».
