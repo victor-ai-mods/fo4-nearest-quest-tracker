@@ -1166,6 +1166,7 @@ EndFunction
 
 Function Notify(Bool abRussian, String asRussian, String asEnglish)
     If NQT_Notifications.GetValue() != 0.0
+        HudDump("Notify")   ; DIAG 2026-10-13: also the auto mode's "marked ..." (in dialogue, after a quest ends)
         Debug.Notification(Choose(abRussian, asRussian, asEnglish))
     EndIf
 EndFunction

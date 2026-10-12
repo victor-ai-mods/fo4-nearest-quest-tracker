@@ -58,9 +58,9 @@ namespace NQT
 			messages.GetMember("ShownMessageArray", &shown);
 			GFxValue group;
 			menu->uiMovie->asMovieRoot->GetVariable(&group, "root.HUDNotificationsGroup_mc");
-			logger::info("HUD [{}]: queued {}, shown {}, CanAddMessage {}, Messages visible {} alpha {} y {} height {};"
-						 " group visible {} alpha {}"sv,
-				a_tag, Member(queued, "length"), Member(shown, "length"), Member(messages, "CanAddMessage"),
+			logger::info("HUD [{}]: dialogue {}, queued {}, shown {}, CanAddMessage {}, Messages visible {} alpha {} y {}"
+						 " height {}; group visible {} alpha {}"sv,
+				a_tag, ui->GetMenuOpen("DialogueMenu"sv),Member(queued, "length"), Member(shown, "length"), Member(messages, "CanAddMessage"),
 				Member(messages, "visible"), Member(messages, "alpha"), Member(messages, "y"), Member(messages, "height"),
 				Member(group, "visible"), Member(group, "alpha"));
 			GFxValue count;
