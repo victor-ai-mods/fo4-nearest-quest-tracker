@@ -993,6 +993,8 @@ package
 				SetCell(row.name, (data.tracked ? "» " : "") + RowName(data));
 				SetCell(row.world, data.world);
 				SetText(row.dist, DistanceText(data.dist));
+				// Без кнопки «Исключить» состояние занимает и её место (там бывает «мешает «…»»).
+				row.state.width = data.kind == KIND_NONE ? listW - cols[3] - 6 : cols[4] - cols[3] - 10;
 				SetCell(row.state, RowState(data));
 				row.sprite.alpha = data.excluded ? 0.45 : (data.kind == KIND_NONE ? 0.7 : 1.0);
 				row.sprite.buttonMode = data.kind != KIND_NONE;
@@ -1044,7 +1046,8 @@ package
 				case STATE_NOT_STARTED:
 					return T("не начат", "not started");
 				case STATE_NOT_OFFERED:
-					return T("временно недоступен", "not offered now");
+					return data.blockedBy ? T("мешает «" + data.blockedBy + "»", "blocked by " + data.blockedBy)
+						: T("временно недоступен", "not offered now");
 				case STATE_COMPLETED:
 					return T("выполнен", "completed");
 			}
@@ -1121,8 +1124,21 @@ package
 			if (row && row.data)
 			{
 				DrawRow(row, row.data.kind != KIND_NONE);
-				SetStatus(RowName(row.data));
+				SetStatus(RowStatus(row.data));
 			}
+		}
+
+		// Строка состояния для строки под мышью: полное название, у квеста «временно недоступен» — и причина.
+		private function RowStatus(data:Object):String
+		{
+			var s:String = RowName(data);
+			if (data.kind == KIND_NONE && data.state == STATE_NOT_OFFERED)
+			{
+				s += data.blockedBy ? T(" — «" + data.blockedAt + "» держит квест «" + data.blockedBy + "»",
+					" - " + data.blockedAt + " is held by " + data.blockedBy)
+					: T(" — сейчас не предлагают, загляните позже", " - not offered now, come back later");
+			}
+			return s;
 		}
 
 		private function OnRowOut(e:MouseEvent):void
@@ -1258,31 +1274,34 @@ package
 				treeBox.addChild(MakeTreeRow(r));
 			}
 
-			// Строка под списком: слева состояние (и полное название строки под мышью), по центру «Закрыть», справа счётчик.
-			scrollInfo = MakeField(16, TextFormatAlign.RIGHT, 260, false);
-			scrollInfo.x = PANEL_W - MARGIN - 260;
+			// Строка под списком: справа счётчик, левее него «Закрыть»; слева от кнопки — подсказки управления,
+			// а вместо них, пока есть, — состояние (и полное название строки под мышью).
+			scrollInfo = MakeField(16, TextFormatAlign.RIGHT, 150, false);
+			scrollInfo.x = PANEL_W - MARGIN - 150;
 			scrollInfo.y = PANEL_H - BUTTON_H - 16 + 8;
 			scrollInfo.alpha = 0.7;
 			panel.addChild(scrollInfo);
-
-			status = MakeField(16, TextFormatAlign.LEFT, (PANEL_W - 200) / 2 - MARGIN - 20, false);
-			status.x = MARGIN;
-			status.y = scrollInfo.y;
-
-			hints = MakeField(14, TextFormatAlign.CENTER, PANEL_W, false);
-			hints.y = LIST_Y + ROWS * ROW_H - 2;
-			hints.alpha = 0.6;
-			panel.addChild(hints);
-			status.alpha = 0.7;
-			panel.addChild(status);
 
 			var close:Object = MakeButton(200, BUTTON_H, OnCloseClick, OnCloseOver, OnCloseOut);
 			closeButton = close.sprite;
 			closeFrame = close.back;
 			SetText(close.text, "$NQT_MENU_CLOSE");
-			closeButton.x = (PANEL_W - 200) / 2;
+			closeButton.x = scrollInfo.x - 20 - 200;
 			closeButton.y = PANEL_H - BUTTON_H - 16;
 			panel.addChild(closeButton);
+
+			var leftW:Number = closeButton.x - 20 - MARGIN;
+			hints = MakeField(14, TextFormatAlign.RIGHT, leftW, false);
+			hints.x = MARGIN;
+			hints.y = closeButton.y + 10;
+			hints.alpha = 0.6;
+			panel.addChild(hints);
+
+			status = MakeField(16, TextFormatAlign.LEFT, leftW, false);
+			status.x = MARGIN;
+			status.y = scrollInfo.y;
+			status.alpha = 0.7;
+			panel.addChild(status);
 
 			BuildTree([]);
 			ShowAll();
@@ -1453,9 +1472,14 @@ package
 			Close("button");
 		}
 
+		// Состояние занимает место подсказок: пока оно есть, подсказки скрыты.
 		private function SetStatus(s:String):void
 		{
 			SetCell(status, s);
+			if (hints)
+			{
+				hints.visible = s == null || s == "";
+			}
 		}
 
 		private function PlaySound(asSound:String):void

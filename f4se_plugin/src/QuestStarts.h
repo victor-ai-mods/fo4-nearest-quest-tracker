@@ -46,6 +46,16 @@ namespace NQT
 	// did not fill). Kept while the player stays in that location; leaving it gives the quest a new chance.
 	[[nodiscard]] bool IsStartNotOffered(const RE::TESQuest& a_quest);
 
+	// Why a quest may not start: a location one of its required aliases must hold (specific location, no
+	// "Allow Reserved") is held by a reserving location alias of another running quest - the usual case
+	// (Painting the Town vs Quartermastery at Hardware Town). nullopt if no such quest is found.
+	struct StartBlocker
+	{
+		const RE::BGSLocation* location{ nullptr };
+		RE::TESQuest*          holder{ nullptr };
+	};
+	[[nodiscard]] std::optional<StartBlocker> FindStartBlocker(const RE::TESQuest& a_quest);
+
 	// Start points that can be used now: quest not completed, not started yet (see QuestStart::objective
 	// and stage), every `after` group satisfied, the giver not dead or disabled (when it is in memory),
 	// the giver not refusing it (IsStartNotOffered).

@@ -29,6 +29,11 @@ Int Function GetStartMarkerID(Quest akQuest) native global
 ; quest holds the location). Stays true while the player stays in that place.
 Bool Function IsStartNotOffered(Quest akQuest) native global
 
+; Why akQuest may not start: FormID of the running quest whose alias holds (reserves) a location akQuest needs,
+; 0 if none is found; GetStartBlockedPlace - the name of that location.
+Int Function GetStartBlocker(Quest akQuest) native global
+String Function GetStartBlockedPlace(Quest akQuest) native global
+
 ; True if QuestStarts.json (or QuestStarts-user.json) has a start point for akQuest.
 Bool Function HasQuestStart(Quest akQuest) native global
 

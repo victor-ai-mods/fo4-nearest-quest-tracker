@@ -233,6 +233,12 @@ namespace NQT::Window
 				                   IsStartNotOffered(*entry.quest) ? QuestState::kNotOffered :
 				                                                     QuestState::kNotStarted;
 				row.SetMember("state", GFxValue(std::to_underlying(state)));
+				if (state == QuestState::kNotOffered) {
+					if (const auto blocker = FindStartBlocker(*entry.quest)) {
+						row.SetMember("blockedBy", builder.String(QuestName(*blocker->holder, true)));
+						row.SetMember("blockedAt", builder.String(std::string{ RE::TESFullName::GetFullName(*blocker->location) }));
+					}
+				}
 				row.SetMember("category", builder.String(entry.category));
 				rows.PushBack(row);
 			}

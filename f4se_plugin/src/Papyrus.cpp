@@ -133,6 +133,20 @@ namespace NQT::Papyrus
 			return a_quest && NQT::IsStartNotOffered(*a_quest);
 		}
 
+		// FormID of the running quest holding a location a_quest needs (FindStartBlocker); 0 if none.
+		std::int32_t GetStartBlocker(std::monostate, RE::TESQuest* a_quest)
+		{
+			const auto blocker = a_quest ? FindStartBlocker(*a_quest) : std::nullopt;
+			return blocker ? static_cast<std::int32_t>(blocker->holder->GetFormID()) : 0;
+		}
+
+		// Name of that location; "" if none.
+		std::string GetStartBlockedPlace(std::monostate, RE::TESQuest* a_quest)
+		{
+			const auto blocker = a_quest ? FindStartBlocker(*a_quest) : std::nullopt;
+			return blocker ? std::string{ RE::TESFullName::GetFullName(*blocker->location) } : std::string{};
+		}
+
 		bool HasQuestStart(std::monostate, RE::TESQuest* a_quest)
 		{
 			return a_quest && FindQuestStart(*a_quest);
@@ -312,6 +326,8 @@ namespace NQT::Papyrus
 		a_vm->BindNativeMethod(kScript, "FindNearestTarget"sv, FindNearestTarget, true);
 		a_vm->BindNativeMethod(kScript, "GetStartMarkerID"sv, GetStartMarkerID, true);
 		a_vm->BindNativeMethod(kScript, "IsStartNotOffered"sv, IsStartNotOffered, true);
+		a_vm->BindNativeMethod(kScript, "GetStartBlocker"sv, GetStartBlocker, true);
+		a_vm->BindNativeMethod(kScript, "GetStartBlockedPlace"sv, GetStartBlockedPlace, true);
 		a_vm->BindNativeMethod(kScript, "HasQuestStart"sv, HasQuestStart, true);
 		a_vm->BindNativeMethod(kScript, "GetStartName"sv, GetStartName, true);
 		a_vm->BindNativeMethod(kScript, "IsRadioStart"sv, IsRadioStart, true);

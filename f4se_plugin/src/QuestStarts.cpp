@@ -147,6 +147,53 @@ namespace NQT
 			return a_quest.data.flags & 1;
 		}
 
+		// BGSLocAlias::IsLocAlias (OG id 78630): the alias itself if its QType is the location alias type.
+		[[nodiscard]] bool IsLocAlias(const RE::BGSBaseAlias* a_alias)
+		{
+			using func_t = const RE::BGSBaseAlias*(const RE::BGSBaseAlias*);
+			static REL::Relocation<func_t*> func{ REL::ID(78630) };
+			return func(a_alias) != nullptr;
+		}
+
+		// TESQuest::GetAliasedLoc (OG id 1552479, rva 5DD0A0): the location an alias of a running quest holds;
+		// takes aliasAccessLock itself.
+		[[nodiscard]] RE::BGSLocation* GetAliasedLoc(const RE::TESQuest& a_quest, std::uint32_t a_aliasID)
+		{
+			using func_t = RE::BGSLocation*(const RE::TESQuest*, std::uint32_t);
+			static REL::Relocation<func_t*> func{ REL::ID(1552479) };
+			return func(&a_quest, a_aliasID);
+		}
+
+		// BGSLocAlias (no layout in CommonLibF4): fill type 1 = specific location, the location at +0x28
+		// (TESQuest::FindLocForAlias, OG rva 5DC1E0, case 1).
+		constexpr std::uint16_t kSpecificLocationFill = 1;
+
+		[[nodiscard]] const RE::BGSLocation* SpecificLocation(const RE::BGSBaseAlias& a_alias)
+		{
+			return *reinterpret_cast<RE::BGSLocation* const*>(reinterpret_cast<const std::byte*>(&a_alias) + 0x28);
+		}
+
+		// The running quest (other than a_except) with a reserving location alias holding a_location.
+		[[nodiscard]] RE::TESQuest* FindReservingQuest(const RE::BGSLocation& a_location, const RE::TESQuest& a_except)
+		{
+			const auto dataHandler = RE::TESDataHandler::GetSingleton();
+			if (!dataHandler) {
+				return nullptr;
+			}
+			for (const auto quest : dataHandler->GetFormArray<RE::TESQuest>()) {
+				if (!quest || quest == &a_except || !IsEnabled(*quest)) {
+					continue;
+				}
+				for (const auto alias : quest->aliases) {
+					if (alias && alias->flags.all(RE::BGSBaseAlias::FLAGS::kReserves) && IsLocAlias(alias) &&
+						GetAliasedLoc(*quest, alias->aliasID) == &a_location) {
+						return quest;
+					}
+				}
+			}
+			return nullptr;
+		}
+
 		// Quests whose giver was seen not offering them -> the player's location then (see NotOffered).
 		std::mutex                                                     notOfferedLock;
 		std::unordered_map<const RE::TESQuest*, const RE::BGSLocation*> notOffered;
@@ -176,7 +223,9 @@ namespace NQT
 			}
 			if (a_live && a_live->Get3D()) {
 				if (notOffered.insert_or_assign(a_start.quest, here).second) {
-					logger::info("start {}: giver loaded, quest not running -> not offered now"sv, a_start.name);
+					const auto blocker = FindStartBlocker(*a_start.quest);
+					logger::info("start {}: giver loaded, quest not running -> not offered now{}"sv, a_start.name,
+						blocker ? std::format("; location {:08X} {} held by {}"sv, blocker->location->GetFormID(), RE::TESFullName::GetFullName(*blocker->location), DescribeQuest(*blocker->holder)) : ""s);
 				}
 				return true;
 			}
@@ -424,6 +473,22 @@ namespace NQT
 			refused |= status == Status::kNotOffered;
 		}
 		return refused;
+	}
+
+	std::optional<StartBlocker> FindStartBlocker(const RE::TESQuest& a_quest)
+	{
+		using Flags = RE::BGSBaseAlias::FLAGS;
+		for (const auto alias : a_quest.aliases) {
+			if (!alias || alias->fillType != kSpecificLocationFill || alias->flags.any(Flags::kOptional, Flags::kAllowReserved) ||
+				!IsLocAlias(alias)) {
+				continue;
+			}
+			const auto location = SpecificLocation(*alias);
+			if (const auto holder = location ? FindReservingQuest(*location, a_quest) : nullptr) {
+				return StartBlocker{ location, holder };
+			}
+		}
+		return std::nullopt;
 	}
 
 	std::vector<Candidate> CollectStartCandidates()

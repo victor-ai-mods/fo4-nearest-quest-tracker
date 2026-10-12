@@ -754,7 +754,15 @@ Function PollStart()
         If NQT_Native.IsStartNotOffered(ShownStart)
             Bool russian = IsRussian()
             String name = StartName(ShownStart, russian)
-            Notify(russian, "«" + name + "» сейчас не предлагают — загляните позже", name + " is not offered right now - come back later")
+            Quest holder = Game.GetForm(NQT_Native.GetStartBlocker(ShownStart)) as Quest
+            If holder
+                String place = NQT_Native.GetStartBlockedPlace(ShownStart)
+                String by = NQT_Native.GetQuestDisplayName(holder)
+                Notify(russian, "«" + name + "» сейчас не предлагают: «" + place + "» держит квест «" + by + "»", \
+                    name + " is not offered right now: " + place + " is held by " + by)
+            Else
+                Notify(russian, "«" + name + "» сейчас не предлагают — загляните позже", name + " is not offered right now - come back later")
+            EndIf
         EndIf
         ClearStart()
         If NQT_AutoTrack.GetValue() != 0.0
