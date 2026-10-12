@@ -79,6 +79,10 @@ Int Property StartPollTimer = 2 AutoReadOnly Hidden
 Float Property StartPollInterval = 3.0 AutoReadOnly Hidden
 Int Property LocationPollTimer = 3 AutoReadOnly Hidden
 Float Property LocationPollInterval = 3.0 AutoReadOnly Hidden
+; DIAG 2026-10-13 (HUD messages stop): HudDump(tag) writes the HUD message queue now, after 1 s and after 5 s.
+Int Property HudDumpTimer1 = 4 AutoReadOnly Hidden
+Int Property HudDumpTimer5 = 5 AutoReadOnly Hidden
+String HudDumpTag = ""
 ; Must match tools/gen_esp.py (START_OBJECTIVE, START_ALIAS; the location quest has the same layout).
 Int Property StartObjective = 0 AutoReadOnly Hidden
 Int Property StartAlias = 0 AutoReadOnly Hidden
@@ -133,6 +137,14 @@ Event Actor.OnPlayerLoadGame(Actor akSender)
 EndEvent
 
 Event OnTimer(Int aiTimerID)
+    If aiTimerID == HudDumpTimer1
+        NQT_Native.DumpHudMessages(HudDumpTag + " +1s")
+        Return
+    EndIf
+    If aiTimerID == HudDumpTimer5
+        NQT_Native.DumpHudMessages(HudDumpTag + " +5s")
+        Return
+    EndIf
     If aiTimerID == StartPollTimer
         PollStart()
         Return
@@ -297,10 +309,19 @@ Function RestoreLast()
     Track(false)
 EndFunction
 
+; DIAG 2026-10-13: the HUD message queue before a hotkey's notifications, 1 s and 5 s later.
+Function HudDump(String asTag)
+    HudDumpTag = asTag
+    NQT_Native.DumpHudMessages(asTag + " before")
+    StartTimer(1.0, HudDumpTimer1)
+    StartTimer(5.0, HudDumpTimer5)
+EndFunction
+
 ; Turns the auto mode (NQT_AutoTrack, MCM "Automatic") on or off. The notification is shown even with
 ; NQT_Notifications off: it is the only sign the key worked.
 Function ToggleAutoTrack()
     Setup()
+    HudDump("ToggleAutoTrack")
     Bool russian = IsRussian()
     If NQT_AutoTrack.GetValue() != 0.0
         NQT_AutoTrack.SetValue(0.0)
@@ -320,6 +341,7 @@ EndFunction
 ; the key is for.
 Function ShowCurrentQuest()
     Setup()
+    HudDump("ShowCurrentQuest")
     Bool russian = IsRussian()
     Bool window = NQT_ShowQuestInWindow.GetValue() != 0.0
     Quest[] quests = new Quest[1]
