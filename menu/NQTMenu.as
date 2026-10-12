@@ -131,8 +131,7 @@ package
 		private static const SEARCH_H:Number = 34;
 		private var searchBox:Sprite;
 		private var searchBack:Shape;
-		private var searchField:TextField;     // поле ввода — прозрачное, только принимает буквы
-		private var searchShown:TextField;     // что видно: Scaleform рисует буквы поля ввода квадратиками
+		private var searchField:TextField;
 		private var searchHint:TextField;
 		private var searchText:Array = ["", ""];
 		private var typing:Boolean = false;
@@ -1300,14 +1299,11 @@ package
 			searchField.mouseEnabled = true;
 			searchField.maxChars = 40;
 			searchField.addEventListener(Event.CHANGE, OnSearchChange);
-			// Тест: набранное в поле ввода рисуется квадратиками и setTextFormat не помогает — поле прозрачное,
-			// а текст показывает обычное поле (SetText, как все надписи окна).
-			searchField.alpha = 0;
+			// Тест: с embedFonts набранное рисуется квадратиками (буквы ищутся во встроенных шрифтах SWF). Как в FallUI
+			// (M8r FontLoader.applyFontOnly: для ванильных "$MAIN_Font" и т.п. embedFonts = false): шрифт берётся
+			// по имени через fontconfig игры, где у $MAIN_Font есть кириллица.
+			searchField.embedFonts = false;
 			searchBox.addChild(searchField);
-			searchShown = MakeField(18, TextFormatAlign.LEFT, SEARCH_W - 16, false);
-			searchShown.x = 8;
-			searchShown.y = (SEARCH_H - 28) / 2;
-			searchBox.addChild(searchShown);
 			searchBox.buttonMode = true;
 			searchBox.addEventListener(MouseEvent.CLICK, OnSearchClick);
 			panel.addChild(searchBox);
@@ -1579,7 +1575,6 @@ package
 			{
 				SetText(searchField, searchText[tab]);
 			}
-			SetTail(searchShown, searchField.text + (typing ? "|" : ""));
 			SetText(searchHint, T("Поиск по названию", "Search by name"));
 			searchHint.visible = searchField.text == "";
 		}
@@ -1761,19 +1756,6 @@ package
 			var fmt:TextFormat = tf.defaultTextFormat;
 			tf.text = s != null ? s : "";
 			tf.setTextFormat(fmt);
-		}
-
-		// Как SetCell, но не влезает — видно конец («…» в начале): так виден набираемый текст.
-		private static function SetTail(tf:TextField, s:String):void
-		{
-			SetText(tf, s);
-			var limit:Number = tf.width - 6;
-			var cut:int = 0;
-			while (tf.textWidth > limit && cut < s.length)
-			{
-				cut++;
-				SetText(tf, "…" + s.substr(cut));
-			}
 		}
 
 		// Текст ячейки; не влезает в ширину — обрезается с «…».
