@@ -660,6 +660,26 @@ namespace NQT
 		return IsCompleted(a_quest);
 	}
 
+	bool IsQuestRunning(const RE::TESQuest& a_quest) noexcept
+	{
+		return IsEnabled(a_quest);
+	}
+
+	const RE::BGSLocation* FindHeldLocation(const RE::TESQuest& a_quest)
+	{
+		if (!IsEnabled(a_quest)) {
+			return nullptr;
+		}
+		for (const auto alias : a_quest.aliases) {
+			if (alias && alias->flags.all(RE::BGSBaseAlias::FLAGS::kReserves) && IsLocAlias(alias)) {
+				if (const auto location = GetAliasedLoc(a_quest, alias->aliasID)) {
+					return location;
+				}
+			}
+		}
+		return nullptr;
+	}
+
 	const QuestStart* FindAvailableStart(const RE::TESQuest& a_quest)
 	{
 		const auto player = RE::PlayerCharacter::GetSingleton();

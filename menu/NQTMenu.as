@@ -68,6 +68,7 @@ package
 		private static const STATE_NOT_OFFERED:int = 5;  // квестодатель рядом, но квест сейчас не предлагает
 		private static const STATE_CLOSED:int = 6;       // фракция квеста враждебна игроку (изгнали)
 		private static const STATE_GIVER_HOSTILE:int = 7;  // квестодатель враждебен игроку
+		private static const STATE_RUNNING:int = 8;        // запущен игрой (в фоне), но не взят: в Pip-Boy его нет
 		// Фильтр состояния: невыполненные (по умолчанию), все, в Pip-Boy, можно начать, не начатые, выполненные.
 		private static const STATE_FILTERS:int = 6;
 
@@ -854,7 +855,7 @@ package
 					return q.state == STATE_CAN_START;
 				case 4:
 					return q.state == STATE_NOT_STARTED || q.state == STATE_NOT_OFFERED || q.state == STATE_CLOSED
-						|| q.state == STATE_GIVER_HOSTILE;
+						|| q.state == STATE_GIVER_HOSTILE || q.state == STATE_RUNNING;
 				case 5:
 					return q.state == STATE_COMPLETED;
 			}
@@ -1138,6 +1139,9 @@ package
 					return T("можно начать", "can be started");
 				case STATE_NOT_STARTED:
 					return T("не начат", "not started");
+				case STATE_RUNNING:
+					return data.heldAt ? T("запущен игрой, держит «" + data.heldAt + "»", "started by the game, holds " + data.heldAt)
+						: T("запущен игрой, не взят", "started by the game, not taken");
 				case STATE_GIVER_HOSTILE:
 					return T("квестодатель враждебен", "the giver is hostile");
 				case STATE_CLOSED:

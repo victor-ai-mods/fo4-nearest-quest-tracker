@@ -52,6 +52,14 @@ namespace NQT
 	// True if a_quest is completed (TESQuest data flags bit 1).
 	[[nodiscard]] bool IsQuestCompleted(const RE::TESQuest& a_quest) noexcept;
 
+	// True if a_quest is running or starting (data flags bit 0) - the game started it, maybe in the background
+	// (Story Manager) without giving it to the player yet.
+	[[nodiscard]] bool IsQuestRunning(const RE::TESQuest& a_quest) noexcept;
+
+	// A location a running quest holds reserved (a filled location alias with "Reserves Location"): the quest
+	// keeps other quests from using it; nullptr if none.
+	[[nodiscard]] const RE::BGSLocation* FindHeldLocation(const RE::TESQuest& a_quest);
+
 	// The nearest start point of a_quest that is available now; nullptr if none is.
 	[[nodiscard]] const QuestStart* FindAvailableStart(const RE::TESQuest& a_quest);
 
