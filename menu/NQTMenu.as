@@ -67,6 +67,7 @@ package
 		private static const STATE_COMPLETED:int = 4;
 		private static const STATE_NOT_OFFERED:int = 5;  // квестодатель рядом, но квест сейчас не предлагает
 		private static const STATE_CLOSED:int = 6;       // фракция квеста враждебна игроку (изгнали)
+		private static const STATE_GIVER_HOSTILE:int = 7;  // квестодатель враждебен игроку
 		// Фильтр состояния: невыполненные (по умолчанию), все, в Pip-Boy, можно начать, не начатые, выполненные.
 		private static const STATE_FILTERS:int = 6;
 
@@ -852,7 +853,8 @@ package
 				case 3:
 					return q.state == STATE_CAN_START;
 				case 4:
-					return q.state == STATE_NOT_STARTED || q.state == STATE_NOT_OFFERED || q.state == STATE_CLOSED;
+					return q.state == STATE_NOT_STARTED || q.state == STATE_NOT_OFFERED || q.state == STATE_CLOSED
+						|| q.state == STATE_GIVER_HOSTILE;
 				case 5:
 					return q.state == STATE_COMPLETED;
 			}
@@ -1136,6 +1138,8 @@ package
 					return T("можно начать", "can be started");
 				case STATE_NOT_STARTED:
 					return T("не начат", "not started");
+				case STATE_GIVER_HOSTILE:
+					return T("квестодатель враждебен", "the giver is hostile");
 				case STATE_CLOSED:
 					return T("враждебна фракция «" + data.closedRu + "»", "hostile: " + data.closedEn);
 				case STATE_NOT_OFFERED:

@@ -36,6 +36,9 @@ Int Function GetStartBlocker(Quest akQuest) native global
 ; Every start point of akQuest is closed because its faction is hostile to the player (kicked out): the faction's
 ; name; "" if not.
 String Function GetStartClosedBy(Quest akQuest, Bool abRussian) native global
+
+; True if akQuest has no available start point because its giver is hostile to the player.
+Bool Function IsStartGiverHostile(Quest akQuest) native global
 String Function GetStartBlockedPlace(Quest akQuest) native global
 
 ; True if QuestStarts.json (or QuestStarts-user.json) has a start point for akQuest.

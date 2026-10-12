@@ -43,6 +43,7 @@ namespace NQT::Window
 			kCompleted = 4,
 			kNotOffered = 5,  // IsStartNotOffered: the giver is near but does not offer it now
 			kClosed = 6,      // FindStartClosure: its faction is hostile (kicked the player out)
+			kGiverHostile = 7,  // IsStartGiverHostile: the giver would fight the player
 		};
 
 		// Row distances that are not distances.
@@ -233,6 +234,7 @@ namespace NQT::Window
 				const auto closure = entry.completed ? nullptr : FindStartClosure(*entry.quest);
 				const auto state = entry.completed           ? QuestState::kCompleted :
 				                   closure                   ? QuestState::kClosed :
+				                   IsStartGiverHostile(*entry.quest) ? QuestState::kGiverHostile :
 				                   IsStartNotOffered(*entry.quest) ? QuestState::kNotOffered :
 				                                                     QuestState::kNotStarted;
 				row.SetMember("state", GFxValue(std::to_underlying(state)));

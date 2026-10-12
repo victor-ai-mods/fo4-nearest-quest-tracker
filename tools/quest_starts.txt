@@ -17,6 +17,10 @@
 #                 Если рядом с квестодателем квест не работает (не заполнился обязательный алиас — чаще
 #                 всего локацию держит другой квест), DLL пишет «временно недоступен» и старт пропускает.
 #                 Кандидаты считает tools/quest_starts_running.py.
+#   radiant info=I[,I] — радиантный (повторяемый) квест: старт доступен, пока квестодатель его предлагает —
+#                 работает квест хотя бы одной реплики-предложения I (FormID INFO; без плагина — плагин ref) и
+#                 её условия истинны для квестодателя и игрока (пока квестодатель не в памяти — только условия,
+#                 не читающие его самого). «Выполнен» не учитывается: квест приходит снова.
 #   closed=K    — старт закрыт, пока фракция K враждебна игроку (изгнали: Братство, Подземка, Институт — после
 #                 выбора другой фракции; Минитмены — после рейдов в Нюка-Мире; Фар-Харбор, Акадия, Дети Атома).
 #                 Ключи и FormID — CLOSED в tools/gen_quest_starts.py. В окне «враждебна фракция …», F1 пропускает.
@@ -167,3 +171,38 @@ DLC04MS02               DLCNukaWorld.esm|00CC9D                   # Trip to the 
 DLC04SafariAdventureQuest DLCNukaWorld.esm|0260E6                 # Safari Adventure — Сито
 DLC04SettlementFF02     DLCNukaWorld.esm|0234A3                   # Precious Medals — ЛИЯ (Ядер-Таун)
 DLC04RaiderKickout      DLCNukaWorld.esm|01FB00  after=DLC04MQ01  # Open Season — Маккензи Бриджман (рынок Ядер-Тауна)
+
+# --- Радиантные (повторяемые) квесты: квестодатель, пока он предлагает задание (tools/radiant_offers_research.py --emit) ---
+MinRecruit01                   Fallout4.esm|01A4D7  radiant  info=09C8DE,0DF272  closed=minutemen  # PrestonGarvey
+MinRecruit02                   Fallout4.esm|01A4D7  radiant  info=0998AA,0DF26A  closed=minutemen  # PrestonGarvey
+MinRecruit04                   Fallout4.esm|048B76  radiant  info=02B9A6,02B9AD,02B9AE,02B9B0  closed=minutemen  # Wiseman
+MinRecruit04                   Fallout4.esm|01A4D7  radiant  info=15B8A6,15B8B4  closed=minutemen  # PrestonGarvey
+MinRecruit05                   Fallout4.esm|01A4D7  radiant  info=15F0BF,15F0C7  closed=minutemen  # PrestonGarvey
+MinRecruit06                   Fallout4.esm|01A4D7  radiant  info=16044A,16045A  closed=minutemen  # PrestonGarvey
+MinRecruit07                   Fallout4.esm|01A4D7  radiant  info=186667,1866A1  closed=minutemen  # PrestonGarvey
+MinRecruit08                   Fallout4.esm|01A4D7  radiant  info=1632D1,1632E9  closed=minutemen  # PrestonGarvey
+MinRecruit09                   Fallout4.esm|01A4D7  radiant  info=167F51,167F52,167F57  closed=minutemen  # PrestonGarvey
+MinRadiantOwned01              Fallout4.esm|01A4D7  radiant  info=0A18FF,0DF271  closed=minutemen  # PrestonGarvey
+MinRadiantOwned02              Fallout4.esm|01A4D7  radiant  info=0A7280,0DF26C  closed=minutemen  # PrestonGarvey
+MinRadiantOwned03ChangeLocOnly Fallout4.esm|01A4D7  radiant  info=0A7ACC  closed=minutemen  # PrestonGarvey
+MinRadiantOwned04_BOS          Fallout4.esm|01A4D7  radiant  info=0E4788,0E4790  closed=minutemen  # PrestonGarvey
+MinRadiantOwned05              Fallout4.esm|01A4D7  radiant  info=16044D,160452,16045C  closed=minutemen  # PrestonGarvey
+MinRadiantOwned08              Fallout4.esm|01A4D7  radiant  info=186A2E,186A54,186A5F  closed=minutemen  # PrestonGarvey
+MinRadiantOwned11              Fallout4.esm|01A4D7  radiant  info=1533CE,1533CF,1533F2,15340F,153410  closed=minutemen  # PrestonGarvey
+BoSR01                         Fallout4.esm|05DE4C  radiant  info=046C6F  closed=bos  # BoSKnightRhys
+BosR02                         Fallout4.esm|05DE4B  radiant  info=046C85  closed=bos  # BoSScribeHaylen
+BoSR03                         Fallout4.esm|01CC15  radiant  info=046D05,046D06,046D07,046D08,046D09,046D0A,046D0B,046D0D,046D0E,046D0F,046D10,046D11,046D14,046D17,0C8686  closed=bos  # BoSLancerCaptainKells
+BoSR04                         Fallout4.esm|08F556  radiant  info=046C9C,046CA0  closed=bos  # BoSProctorQuinlan
+BoSR05                         Fallout4.esm|1526A8  radiant  info=15355F  closed=bos  # Prydwen_BoSMessOfficer
+RRR02a                         Fallout4.esm|0B3EC9  radiant  info=0B3EA7,0C8E20  closed=railroad  # Caretaker
+RRR03                          Fallout4.esm|0508EC  radiant  info=0C8E27,0E1671,0E1672,0E1673,0E1674,0E1675,0E1676  closed=railroad  # PAM
+RRR05                          Fallout4.esm|0508EA  radiant  info=0C8E33  closed=railroad  # TinkerTom
+RRR07                          Fallout4.esm|0508EC  radiant  info=186CB8,186CB9,186CBA,186CBB,186CBC,186CBD  closed=railroad  # PAM
+RRR09                          Fallout4.esm|050950  radiant  info=1460A6,1460A7,1460FD,146100,146101,146102,146103,146104  closed=railroad  # DoctorCarrington
+RRR10                          Fallout4.esm|0508EC  radiant  info=14AC00,14AC19,14AC1A,14AC1F,14AC2E,14AC36  closed=railroad  # PAM
+RRR11                          Fallout4.esm|0508EC  radiant  info=1505FC,15062C,15062D,15062E,15062F,15063F  closed=railroad  # PAM
+InstR01                        Fallout4.esm|0AA78F  radiant  info=0F797F,0F7980,1AC083  closed=institute  inside  # AlanBinet
+InstR02                        Fallout4.esm|061C32  radiant  info=0EB2A4,0EB2A5,1AC08D  closed=institute  inside  # ClaytonHoldren
+InstR03NEW                     Fallout4.esm|061C35  radiant  info=0ED64B,0ED64C  closed=institute  inside  # EvanWatson
+InstR04                        Fallout4.esm|061C2F  radiant  info=0F00F6,14EACE  closed=institute  inside  # AlanaSecord
+InstR05                        Fallout4.esm|061C37  radiant  info=0F0DCA,0F1491  closed=institute  inside  # JustinAyo

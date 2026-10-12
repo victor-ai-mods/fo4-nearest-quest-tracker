@@ -103,6 +103,19 @@ namespace NQT
 				start.radioRadius = std::max(radio->get<float>(), 1.0f);
 			}
 			start.running = a_entry.value("running", false);
+			start.radiant = a_entry.value("radiant", false);
+			if (const auto infos = a_entry.find("info"); infos != a_entry.end() && infos->is_array()) {
+				for (const auto& key : *infos) {
+					if (const auto id = key.is_string() ? ResolveID(key.get_ref<const std::string&>()) : 0) {
+						start.infos.push_back(id);
+					}
+				}
+			}
+			start.giverBaseID = ResolveRefID(a_entry, "giver");
+			if (start.radiant && start.infos.empty()) {
+				logger::debug("{}: skipped {} (radiant without offer lines loaded)"sv, a_file, start.name);
+				return std::nullopt;
+			}
 			if (const auto closed = a_entry.find("closed"); closed != a_entry.end() && closed->is_array()) {
 				// A condition whose plugin is not loaded is dropped (the entry stays).
 				for (const auto& item : *closed) {
@@ -258,6 +271,116 @@ namespace NQT
 			return nullptr;
 		}
 
+		// --- Radiant offers: the giver's offer lines evaluated by the engine -----------------------------------
+
+		// TESConditionItem::IsTrue(ConditionCheckParams&) (OG id 43452): one condition with the quest scope set,
+		// so GetIsAliasRef reads the line's quest.
+		[[nodiscard]] bool ItemIsTrue(RE::TESConditionItem& a_item, RE::ConditionCheckParams& a_params)
+		{
+			using func_t = bool(RE::TESConditionItem*, RE::ConditionCheckParams&);
+			static REL::Relocation<func_t*> func{ REL::ID(43452) };
+			return func(&a_item, a_params);
+		}
+
+		// Condition functions that do not read the subject (the giver): judged even while it is not in memory.
+		[[nodiscard]] bool IsSubjectFree(std::uint32_t a_function) noexcept
+		{
+			switch (a_function) {
+			case 56:   // GetQuestRunning
+			case 58:   // GetStage
+			case 59:   // GetStageDone
+			case 74:   // GetGlobalValue
+			case 543:  // GetQuestCompleted
+			case 629:  // GetVMQuestVariable
+				return true;
+			default:
+				return false;
+			}
+		}
+
+		// TESCondition::IsTrue<ConditionItemIsTrue> (OG rva 72B6B0): an item with the OR flag joins the next one,
+		// such groups are ANDed. Without a subject the items that read it count as true (the giver is assumed
+		// to be in place: it is where the marker leads).
+		[[nodiscard]] bool ConditionsHold(const RE::TESCondition& a_conditions, RE::ConditionCheckParams& a_params)
+		{
+			bool all = true;
+			bool inOr = false;
+			bool group = false;
+			for (auto item = a_conditions.head; item; item = item->next) {
+				const auto function = static_cast<std::uint32_t>(std::to_underlying(item->data.functionData.function.get())) & 0xFFF;
+				const bool needsSubject = item->data.object.get() == RE::CONDITIONITEMOBJECT::kSelf && !IsSubjectFree(function);
+				const auto value = [&]() { return (!a_params.actionRef && needsSubject) || ItemIsTrue(*item, a_params); };
+				if (inOr) {
+					group = group || value();
+				} else {
+					group = value();
+				}
+				if (item->data.compareOr) {
+					inOr = true;
+					continue;
+				}
+				inOr = false;
+				all = all && group;
+				if (!all) {
+					return false;
+				}
+			}
+			return inOr ? all && group : all;
+		}
+
+		// A radiant start is offered while one of its lines could be said now: the line's quest is running (a
+		// quest's dialogue exists only then) and its conditions hold for the giver and the player.
+		[[nodiscard]] bool Offered(const QuestStart& a_start, RE::TESObjectREFR* a_live)
+		{
+			const auto player = RE::PlayerCharacter::GetSingleton();
+			for (const auto id : a_start.infos) {
+				const auto info = RE::TESForm::GetFormByID<RE::TESTopicInfo>(id);
+				const auto owner = info && info->parentTopic ? info->parentTopic->ownerQuest : nullptr;
+				if (!info || (owner && !IsEnabled(*owner))) {
+					continue;
+				}
+				RE::ConditionCheckParams params;
+				params.actionRef = a_live;
+				params.targetRef = player;
+				params.scopeQuest = owner;
+				if (ConditionsHold(info->objConditions, params)) {
+					return true;
+				}
+			}
+			return false;
+		}
+
+		// Actor::CalculateFactionFightReaction (OG id 339469, rva DA3190): how a_actor would react to a_other -
+		// factions with the ref's own changes (FactionUtil::IntegrateFactionArrays), the crime faction's
+		// GetPCAnEnemy, Actor::IsAngryWithPlayer (assault), relationships. Actor::GetFactionFightReaction calls it
+		// with false when the actor has no AI process; with one it goes through AIProcess::CreateActorKnowledge,
+		// which changes AI state - not used.
+		[[nodiscard]] std::int32_t CalculateFightReaction(RE::Actor& a_actor, RE::Actor& a_other)
+		{
+			using func_t = std::int32_t(RE::Actor*, RE::Actor*, bool);
+			static REL::Relocation<func_t*> func{ REL::ID(339469) };
+			return func(&a_actor, &a_other, false);
+		}
+
+		// The giver would fight the player: in memory (a persistent ref always, a temporary one while its cell is
+		// loaded) the engine's fight reaction; otherwise a faction of its base NPC that is hostile to the player
+		// (changes made on the ref itself are not known then).
+		[[nodiscard]] bool IsGiverHostile(const QuestStart& a_start, RE::TESObjectREFR* a_live)
+		{
+			const auto player = RE::PlayerCharacter::GetSingleton();
+			if (a_live) {
+				const auto actor = a_live->As<RE::Actor>();
+				return actor && player && actor != player && CalculateFightReaction(*actor, *player) == kEnemyRelation;
+			}
+			const auto npc = a_start.giverBaseID ? RE::TESForm::GetFormByID<RE::TESNPC>(a_start.giverBaseID) : nullptr;
+			if (!npc) {
+				return false;
+			}
+			return std::ranges::any_of(npc->factions, [](const RE::FACTION_RANK& a_rank) {
+				return a_rank.faction && a_rank.rank >= 0 && IsPlayerEnemy(*a_rank.faction);
+			});
+		}
+
 		// Quests whose giver was seen not offering them -> the player's location then (see NotOffered).
 		std::mutex                                                     notOfferedLock;
 		std::unordered_map<const RE::TESQuest*, const RE::BGSLocation*> notOffered;
@@ -333,6 +456,9 @@ namespace NQT
 
 		[[nodiscard]] bool IsStarted(const QuestStart& a_start, const ShownObjectives& a_shown)
 		{
+			if (a_start.radiant) {
+				return a_shown.contains(a_start.quest);  // taken: in the Pip-Boy; completed ones come again
+			}
 			if (IsCompleted(*a_start.quest)) {
 				return true;
 			}
@@ -365,6 +491,8 @@ namespace NQT
 			kAvailable,
 			kStarted,     // completed, or an objective has been shown
 			kClosed,      // a `closed` condition holds (faction hostile)
+			kNoOffer,     // radiant: the giver has nothing to offer now
+			kGiverHostile,  // the giver would fight the player
 			kLocked,      // an `after` quest is not completed
 			kGiverGone,   // giver dead or disabled
 			kNotOffered,  // giver near, quest not running (NotOffered)
@@ -380,6 +508,10 @@ namespace NQT
 				return "started"sv;
 			case Status::kClosed:
 				return "closed (faction hostile)"sv;
+			case Status::kNoOffer:
+				return "radiant: no offer now"sv;
+			case Status::kGiverHostile:
+				return "giver hostile"sv;
 			case Status::kLocked:
 				return "locked"sv;
 			case Status::kGiverGone:
@@ -421,8 +553,16 @@ namespace NQT
 				state.status = Status::kGiverGone;
 				return state;
 			}
+			if (IsGiverHostile(a_start, state.live)) {
+				state.status = Status::kGiverHostile;
+				return state;
+			}
 			if (NotOffered(a_start, state.live)) {
 				state.status = Status::kNotOffered;
+				return state;
+			}
+			if (a_start.radiant && !Offered(a_start, state.live)) {
+				state.status = Status::kNoOffer;
 				return state;
 			}
 			if (state.live) {
@@ -559,6 +699,23 @@ namespace NQT
 		return refused;
 	}
 
+	bool IsStartGiverHostile(const RE::TESQuest& a_quest)
+	{
+		const auto shown = GetQuestsWithObjectives();
+		bool       hostile = false;
+		for (const auto& start : starts) {
+			if (start.quest != &a_quest) {
+				continue;
+			}
+			const auto status = Evaluate(start, shown).status;
+			if (status == Status::kAvailable) {
+				return false;
+			}
+			hostile |= status == Status::kGiverHostile;
+		}
+		return hostile;
+	}
+
 	const StartClosure* FindStartClosure(const RE::TESQuest& a_quest)
 	{
 		const auto          shown = GetQuestsWithObjectives();
@@ -636,6 +793,20 @@ namespace NQT
 	std::string GetStartName(const RE::TESQuest& a_quest)
 	{
 		const std::string_view full = RE::TESFullName::GetFullName(a_quest);
+		// A radiant whose name is made of aliases (<Alias=...>, filled only while it runs): the giver's name.
+		if (const auto start = FindQuestStart(a_quest); start && start->radiant && full.find('<') != std::string_view::npos) {
+			const auto live = LiveRef(start->refID);
+			const auto liveName = live ? live->GetDisplayFullName() : nullptr;
+			if (liveName && *liveName) {
+				return liveName;
+			}
+			if (const auto npc = start->giverBaseID ? RE::TESForm::GetFormByID(start->giverBaseID) : nullptr) {
+				const auto name = RE::TESFullName::GetFullName(*npc);
+				if (!name.empty()) {
+					return std::string{ name };
+				}
+			}
+		}
 		std::string            name;
 		bool                   inTag = false;
 		for (const auto ch : full) {

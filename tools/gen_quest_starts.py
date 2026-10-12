@@ -66,6 +66,12 @@ USER_EXAMPLE = {
         '  "closed" - optional: the start is closed while one of these holds, [{"faction": "Plugin.esp|ID", "en": "name"},',
         '             {"global": "Plugin.esp|ID", "en": "name"}]: the faction is hostile to the player (kicked out), or the',
         '             global is not 0; "en"/"ru" name it in the window ("hostile: <name>").',
+        '  "radiant" - optional, true: a repeatable quest; "info" lists the giver\'s lines offering it ["Plugin.esp|ID", ...]',
+        '             (INFO FormIDs). The start is available while the quest of one of those lines is running and the',
+        '             line\'s conditions hold for the giver (only the giver-independent ones while the giver is not loaded);',
+        '             it ignores "completed" (the quest comes again).',
+        '  "giver"  - optional: the giver\'s base NPC; while the ref is not in memory its factions tell whether the giver',
+        '             is hostile (then the start is skipped), and a radiant made of aliases is named after it.',
         '  "running" - optional, true: the giver offers the quest only while the quest is already running (its dialogue',
         '             belongs to the quest itself; the game starts it in the background, e.g. on entering a location).',
         '             Near such a giver a quest that is not running is shown as "not offered now" and skipped.',
@@ -90,7 +96,8 @@ def parse_src(path):
             if not parts:
                 continue
             e = {'quest': parts[0], 'ref': parts[1], 'after': [], 'radio': None, 'objective': None, 'stage': None,
-                 'inside': False, 'running': False, 'closed': [], 'comment': comment.strip(), 'line': n}
+                 'inside': False, 'running': False, 'closed': [], 'radiant': False, 'info': [],
+                 'comment': comment.strip(), 'line': n}
             for p in parts[2:]:
                 k, _, v = p.partition('=')
                 if k == 'after':
@@ -103,6 +110,10 @@ def parse_src(path):
                     e['inside'] = True
                 elif p == 'running':
                     e['running'] = True
+                elif p == 'radiant':
+                    e['radiant'] = True
+                elif k == 'info':
+                    e['info'] = v.split(',')
                 elif k == 'closed':
                     for key in v.split(','):
                         if key not in CLOSED:
@@ -216,6 +227,13 @@ def main():
             entry['radio'] = round(e['radio'])
         if e['running']:
             entry['running'] = True
+        if e['radiant']:
+            # Реплики-предложения: "ID" без плагина — плагин квестодателя.
+            plugin = rk.split('|')[0]
+            entry['radiant'] = True
+            entry['info'] = [x if '|' in x else '%s|%06X' % (plugin, int(x, 16)) for x in e['info']]
+        if r['sig'] == 'ACHR' and r.get('base'):
+            entry['giver'] = r['base']   # база NPC: имя радианта, враждебность, пока ref не в памяти
         if e['closed']:
             entry['closed'] = [{kind: form, 'ru': CLOSED[key][1], 'en': CLOSED[key][2]}
                                for key in e['closed'] for kind, form in CLOSED[key][0]]

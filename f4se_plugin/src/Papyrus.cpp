@@ -154,6 +154,11 @@ namespace NQT::Papyrus
 			return closure ? (a_russian ? closure->ru : closure->en) : std::string{};
 		}
 
+		bool IsStartGiverHostile(std::monostate, RE::TESQuest* a_quest)
+		{
+			return a_quest && NQT::IsStartGiverHostile(*a_quest);
+		}
+
 		bool HasQuestStart(std::monostate, RE::TESQuest* a_quest)
 		{
 			return a_quest && FindQuestStart(*a_quest);
@@ -335,6 +340,7 @@ namespace NQT::Papyrus
 		a_vm->BindNativeMethod(kScript, "IsStartNotOffered"sv, IsStartNotOffered, true);
 		a_vm->BindNativeMethod(kScript, "GetStartBlocker"sv, GetStartBlocker, true);
 		a_vm->BindNativeMethod(kScript, "GetStartClosedBy"sv, GetStartClosedBy, true);
+		a_vm->BindNativeMethod(kScript, "IsStartGiverHostile"sv, IsStartGiverHostile, true);
 		a_vm->BindNativeMethod(kScript, "GetStartBlockedPlace"sv, GetStartBlockedPlace, true);
 		a_vm->BindNativeMethod(kScript, "HasQuestStart"sv, HasQuestStart, true);
 		a_vm->BindNativeMethod(kScript, "GetStartName"sv, GetStartName, true);

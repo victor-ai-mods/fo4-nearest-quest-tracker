@@ -29,6 +29,9 @@ namespace NQT
 		float                      radioRadius{ 0.0f };  // > 0: the ref is a radio transmitter heard within this radius
 		bool                       running{ false };  // the giver offers the quest only while it is running (see NotOffered)
 		std::vector<StartClosure>  closed;          // any of them holds -> the start is closed (faction kicked the player out)
+		bool                       radiant{ false };  // repeatable: offered while a line in `infos` would be said (see Offered)
+		std::vector<std::uint32_t> infos;           // radiant: the giver's lines offering the quest (TESTopicInfo FormIDs)
+		std::uint32_t              giverBaseID{ 0 };  // the giver's base NPC: hostility and radiant name while the ref is not loaded
 		std::string                name;           // for the log
 	};
 
@@ -56,6 +59,9 @@ namespace NQT
 	// running quest (FindStartBlocker; then wherever the player is), or the player is at the giver - kept while the
 	// player stays in that location, leaving it gives the quest a new chance.
 	[[nodiscard]] bool IsStartNotOffered(const RE::TESQuest& a_quest);
+
+	// True if a_quest has no available start point and one of its givers is hostile to the player (IsGiverHostile).
+	[[nodiscard]] bool IsStartGiverHostile(const RE::TESQuest& a_quest);
 
 	// Why a quest cannot be started: every start point it has is closed (QuestStart::closed) - the closure that
 	// holds for its first start; nullptr if a start is not closed (or the quest is started or completed).
