@@ -1,5 +1,6 @@
 package
 {
+	import flash.display.DisplayObject;
 	import flash.display.MovieClip;
 	import flash.display.Shape;
 	import flash.display.Sprite;
@@ -11,6 +12,7 @@ package
 	import flash.text.TextFieldAutoSize;
 	import flash.text.TextFormat;
 	import flash.text.TextFormatAlign;
+	import flash.text.TextFieldType;
 	import flash.utils.getTimer;
 
 	// Nearest Quest Tracker: своё окно. Вкладка «Квесты» (этап 3c): слева дерево категорий (QuestCategories.json) со
@@ -122,6 +124,20 @@ package
 		private var listIndex:int = 0;
 		private var platform:uint = 0;      // SetPlatform: 0 клавиатура и мышь, иначе геймпад
 		private var hints:TextField;
+		// Поиск по части названия, своя строка у каждой вкладки. Поле появляется по F (как поиск FallUI в торговле),
+		// видно, пока идёт ввод или задан фильтр. Ввод букв — только пока typing: тогда f4se.AllowTextInput(true)
+		// и фокус Flash на поле; R и Пробел — буквы, а не «исключить» / «вкладка». Enter — применить, Esc — сбросить.
+		private static const SEARCH_W:Number = 280;
+		private static const SEARCH_H:Number = 34;
+		private var searchBox:Sprite;
+		private var searchBack:Shape;
+		private var searchField:TextField;
+		private var searchHint:TextField;
+		private var searchText:Array = ["", ""];
+		private var typing:Boolean = false;
+		private var typingEndedAt:int = -1000;   // Esc, закончивший ввод, не должен тут же закрыть окно
+		private var typingStartedAt:int = 0;
+		private var typedBefore:String = "";
 		private var mouseX0:Number = -1;
 		private var mouseY0:Number = -1;
 		// Колонки списка для текущей вкладки: x названия, мира, расстояния, состояния, кнопки; ширина списка.
@@ -205,9 +221,20 @@ package
 			{
 				return false;
 			}
+			if (typing)
+			{
+				if (asEvent == "Cancel")
+				{
+					CancelSearch();
+				}
+				return true;    // R, Пробел и прочее при вводе — буквы
+			}
 			if (asEvent == "Cancel")
 			{
-				Close("Cancel");
+				if (getTimer() - typingEndedAt > 300)
+				{
+					Close("Cancel");
+				}
 				return true;
 			}
 			if (asEvent == "ReadyWeapon")   // X / R
@@ -239,6 +266,7 @@ package
 		private function OnAddedToStage(e:Event):void
 		{
 			stage.addEventListener(KeyboardEvent.KEY_DOWN, OnKeyDown);
+			stage.addEventListener(MouseEvent.MOUSE_DOWN, OnStageMouseDown);
 			stage.addEventListener(MouseEvent.MOUSE_MOVE, OnMouseMove);
 			stage.addEventListener(MouseEvent.MOUSE_WHEEL, OnWheel);
 			addEventListener(Event.ENTER_FRAME, OnFrame);
@@ -257,10 +285,25 @@ package
 		// Стрелки (и крестовина / стик геймпада), PageUp / PageDown, Enter (A), Esc (B). Код 229 движок шлёт каждый кадр — пропускается.
 		private function OnKeyDown(e:KeyboardEvent):void
 		{
+			if (typing)
+			{
+				if (e.keyCode == 13)
+				{
+					EndTyping();
+				}
+				else if (e.keyCode == 27)
+				{
+					CancelSearch();
+				}
+				return;
+			}
 			switch (e.keyCode)
 			{
 				case 27:
-					Close("Esc");
+					if (getTimer() - typingEndedAt > 300)
+					{
+						Close("Esc");
+					}
 					break;
 				case 37:
 					Navigate(-1, 0);
@@ -282,6 +325,15 @@ package
 					break;
 				case 13:
 					Activate();
+					break;
+				case 70:    // F — поиск
+					StartTyping();
+					break;
+				default:
+					if (e.keyCode != 229)
+					{
+						Log("input: key " + e.keyCode);
+					}
 					break;
 			}
 		}
@@ -455,15 +507,19 @@ package
 		// Подсказки управления под списком: для клавиатуры или геймпада (SetPlatform).
 		private function ShowHints():void
 		{
-			if (platform != 0)
+			if (typing)
+			{
+				SetText(hints, T("Поиск по части названия    Enter — применить    Esc — сбросить", "Search by part of the name    Enter - apply    Esc - clear"));
+			}
+			else if (platform != 0)
 			{
 				SetText(hints, T("Стик — выбор    A — отметить / нажать    X — исключить    Y — вкладка    B — закрыть",
 					"Stick - select    A - mark / press    X - exclude    Y - tab    B - close"));
 			}
 			else
 			{
-				SetText(hints, T("Стрелки — выбор    Enter — отметить / нажать    R — исключить    Пробел — вкладка    Esc — закрыть",
-					"Arrows - select    Enter - mark / press    R - exclude    Space - tab    Esc - close"));
+				SetText(hints, T("Стрелки — выбор    Enter — отметить / нажать    R — исключить    Пробел — вкладка    F — поиск    Esc — закрыть",
+					"Arrows - select    Enter - mark / press    R - exclude    Space - tab    F - search    Esc - close"));
 			}
 		}
 
@@ -507,6 +563,7 @@ package
 			}
 			closing = true;
 			Log("close (" + asWhy + ")");
+			ReleaseTextInput();
 			try
 			{
 				BGSCodeObj.PlaySound("UIMenuCancel");
@@ -815,6 +872,7 @@ package
 		{
 			shown = [];
 			var world:String = worldFilter[tab] >= 0 ? worlds[tab][worldFilter[tab]] : null;
+			var needle:String = Normalize(searchText[tab]);
 			var i:int;
 			if (tab == 1)
 			{
@@ -823,7 +881,7 @@ package
 					var l:Object = locations[i];
 					var interior:Boolean = l.kind == KIND_INTERIOR;
 					if ((!seenOnly || l.seen) && (placeFilter == 0 || interior == (placeFilter == 2))
-						&& (world == null || l.world == world))
+						&& (world == null || l.world == world) && (needle == "" || Normalize(RowName(l)).indexOf(needle) >= 0))
 					{
 						shown.push(l);
 					}
@@ -833,7 +891,8 @@ package
 			for (i = 0; i < quests.length; i++)
 			{
 				var q:Object = quests[i];
-				if (InCategory(q) && PassesStateFilter(q) && (!markerOnly || q.dist != -1) && (world == null || q.world == world))
+				if (InCategory(q) && PassesStateFilter(q) && (!markerOnly || q.dist != -1) && (world == null || q.world == world)
+					&& (needle == "" || Normalize(RowName(q)).indexOf(needle) >= 0))
 				{
 					shown.push(q);
 				}
@@ -916,6 +975,7 @@ package
 			{
 				DrawTab(tabButtons[t], IsSelectedTop(tabButtons[t]));
 			}
+			DrawSearch();
 			ShowHints();
 			ShowList();
 		}
@@ -1220,6 +1280,30 @@ package
 			SetText(title, "$NQT_MENU_TITLE");
 			panel.addChild(title);
 
+			// Поле поиска (F) — справа в строке заголовка, над фильтрами.
+			searchBox = new Sprite();
+			searchBox.x = PANEL_W - MARGIN - SEARCH_W;
+			searchBox.y = 14;
+			searchBack = new Shape();
+			searchBox.addChild(searchBack);
+			searchHint = MakeField(16, TextFormatAlign.LEFT, SEARCH_W - 16, false);
+			searchHint.x = 8;
+			searchHint.y = (SEARCH_H - 26) / 2;
+			searchHint.alpha = 0.5;
+			searchBox.addChild(searchHint);
+			searchField = MakeField(18, TextFormatAlign.LEFT, SEARCH_W - 16, false);
+			searchField.x = 8;
+			searchField.y = (SEARCH_H - 28) / 2;
+			searchField.type = TextFieldType.INPUT;
+			searchField.selectable = true;
+			searchField.mouseEnabled = true;
+			searchField.maxChars = 40;
+			searchField.addEventListener(Event.CHANGE, OnSearchChange);
+			searchBox.addChild(searchField);
+			searchBox.buttonMode = true;
+			searchBox.addEventListener(MouseEvent.CLICK, OnSearchClick);
+			panel.addChild(searchBox);
+
 			for (var t:int = 0; t < 2; t++)
 			{
 				var tabButton:Object = MakeButton(180, BUTTON_H, OnTabClick, OnTabOver, OnTabOut);
@@ -1274,7 +1358,7 @@ package
 				treeBox.addChild(MakeTreeRow(r));
 			}
 
-			// Строка под списком: справа счётчик, левее него «Закрыть»; слева от кнопки — подсказки управления,
+			// Строка под списком: справа счётчик, левее него «Закрыть»; слева (от края) — подсказки управления,
 			// а вместо них, пока есть, — состояние (и полное название строки под мышью).
 			scrollInfo = MakeField(16, TextFormatAlign.RIGHT, 150, false);
 			scrollInfo.x = PANEL_W - MARGIN - 150;
@@ -1291,7 +1375,7 @@ package
 			panel.addChild(closeButton);
 
 			var leftW:Number = closeButton.x - 20 - MARGIN;
-			hints = MakeField(14, TextFormatAlign.RIGHT, leftW, false);
+			hints = MakeField(14, TextFormatAlign.LEFT, leftW, false);
 			hints.x = MARGIN;
 			hints.y = closeButton.y + 10;
 			hints.alpha = 0.6;
@@ -1470,6 +1554,145 @@ package
 		private function OnCloseClick(e:MouseEvent):void
 		{
 			Close("button");
+		}
+
+		// ---------------------------------------------------------------------------------------------------
+		// Поиск
+
+		private function DrawSearch():void
+		{
+			searchBox.visible = typing || searchText[tab] != "";
+			searchBack.graphics.clear();
+			searchBack.graphics.beginFill(0xFFFFFF, typing ? 0.15 : 0.08);
+			searchBack.graphics.lineStyle(typing ? 2 : 1, 0xFFFFFF, 1);
+			searchBack.graphics.drawRect(0, 0, SEARCH_W, SEARCH_H);
+			searchBack.graphics.endFill();
+			if (!typing && searchField.text != searchText[tab])
+			{
+				SetText(searchField, searchText[tab]);
+			}
+			SetText(searchHint, T("Поиск по названию", "Search by name"));
+			searchHint.visible = searchField.text == "";
+		}
+
+		private function StartTyping():void
+		{
+			if (typing || closing)
+			{
+				return;
+			}
+			typing = true;
+			typingStartedAt = getTimer();
+			typedBefore = searchField.text;
+			try
+			{
+				f4se.AllowTextInput(true);
+			}
+			catch (err:Error)
+			{
+				Log("AllowTextInput(true) failed: " + err.message);
+			}
+			stage.focus = searchField;
+			searchField.setSelection(searchField.text.length, searchField.text.length);
+			Log("search: typing");
+			ShowAll();
+		}
+
+		private function EndTyping():void
+		{
+			if (!typing)
+			{
+				return;
+			}
+			ReleaseTextInput();
+			typingEndedAt = getTimer();
+			stage.focus = null;
+			Log("search: '" + searchText[tab] + "' -> " + shown.length + " rows");
+			ShowAll();
+		}
+
+		// Ввод текста выключается обязательно (иначе игра так и останется в режиме ввода), в том числе при закрытии окна.
+		private function ReleaseTextInput():void
+		{
+			if (!typing)
+			{
+				return;
+			}
+			typing = false;
+			try
+			{
+				f4se.AllowTextInput(false);
+			}
+			catch (err:Error)
+			{
+				Log("AllowTextInput(false) failed: " + err.message);
+			}
+		}
+
+		// Esc: фильтр сбрасывается, поле прячется.
+		private function CancelSearch():void
+		{
+			searchText[tab] = "";
+			SetText(searchField, "");
+			scroll = 0;
+			listIndex = 0;
+			EndTyping();
+		}
+
+		private function OnSearchChange(e:Event):void
+		{
+			// Буква самой клавиши F (f / а в русской раскладке), если она успела попасть в поле, — не ввод.
+			var t:String = searchField.text;
+			if (getTimer() - typingStartedAt < 250 && t.length == typedBefore.length + 1 && t.indexOf(typedBefore) == 0
+				&& "fFаА".indexOf(t.charAt(t.length - 1)) >= 0)
+			{
+				SetText(searchField, typedBefore);
+				searchField.setSelection(typedBefore.length, typedBefore.length);
+				return;
+			}
+			searchText[tab] = searchField.text;
+			scroll = 0;
+			listIndex = 0;
+			ShowAll();
+		}
+
+		private function OnSearchClick(e:MouseEvent):void
+		{
+			StartTyping();
+		}
+
+		// Щелчок мимо поля заканчивает ввод.
+		private function OnStageMouseDown(e:MouseEvent):void
+		{
+			if (typing && !searchBox.contains(e.target as DisplayObject))
+			{
+				EndTyping();
+			}
+		}
+
+		// Для сравнения без регистра; Scaleform может не знать регистр кириллицы — он переводится вручную, ё = е.
+		private static function Normalize(s:String):String
+		{
+			if (!s)
+			{
+				return "";
+			}
+			s = s.toLowerCase();
+			var out:Array = [];
+			for (var i:int = 0; i < s.length; i++)
+			{
+				var c:int = s.charCodeAt(i);
+				if (c >= 0x410 && c <= 0x42F)
+				{
+					c += 0x20;
+				}
+				else if (c == 0x401 || c == 0x451)
+				{
+					c = 0x435;
+				}
+				out.push(c);
+			}
+			return String.fromCharCode.apply(null, out);
 		}
 
 		// Состояние занимает место подсказок: пока оно есть, подсказки скрыты.
