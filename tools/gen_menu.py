@@ -20,6 +20,7 @@ import struct
 import subprocess
 import sys
 import tempfile
+import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CLASS = 'NQTMenu'
@@ -181,7 +182,11 @@ def main():
     try:
         scripts = os.path.join(work, 'scripts')
         os.makedirs(scripts)
-        shutil.copy2(SRC, os.path.join(scripts, CLASS + '.as'))
+        # Время сборки в BUILD — в логе окна видно, какой SWF загружен (подхватился ли новый без перезапуска игры).
+        with open(SRC, encoding='utf-8') as f:
+            source = f.read().replace('BUILD:String = "dev"', 'BUILD:String = "%s"' % time.strftime('%Y-%m-%d %H:%M:%S'))
+        with open(os.path.join(scripts, CLASS + '.as'), 'w', encoding='utf-8', newline='') as f:
+            f.write(source)
         os.makedirs(os.path.dirname(OUT), exist_ok=True)
         if os.path.exists(OUT):
             os.remove(OUT)

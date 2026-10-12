@@ -33,6 +33,7 @@ package
 	public class NQTMenu extends MovieClip
 	{
 		public static const MENU_NAME:String = "NQT_Menu";
+		private static const BUILD:String = "dev";   // tools/gen_menu.py подставляет время сборки — видно в логе, какой SWF загружен
 		private static const LOG_EVENT:String = "NQT_MenuLog";
 		private static const ACTION_EVENT:String = "NQT_MenuAction";
 
@@ -131,11 +132,16 @@ package
 		private static const SEARCH_H:Number = 34;
 		private var searchBox:Sprite;
 		private var searchBack:Shape;
-		private var searchField:TextField;
+		private var searchField:TextField;     // поле ввода — невидимое (alpha 0), только принимает буквы
+		private var searchShown:TextField;     // набранный текст: обычная надпись, как все надписи окна
 		private var searchHint:TextField;
 		private var searchText:Array = ["", ""];
 		private var typing:Boolean = false;
-		private var typingEndedAt:int = -1000;   // Esc, закончивший ввод, не должен тут же закрыть окно
+		// Esc закрывает окно на отпускании (ProcessUserEvent "Cancel"), как ванильные меню: тест — закрытие на нажатии
+		// (KeyDown 27) отдавало отпускание игре, и та открывала меню паузы. escUpFrames — запасное закрытие, если
+		// "Cancel" не пришёл; escEndedTyping — этот Esc сбросил поиск и окно не закрывает.
+		private var escUpFrames:int = 0;
+		private var escEndedTyping:Boolean = false;
 		private var typingStartedAt:int = 0;
 		private var typedBefore:String = "";
 		private var mouseX0:Number = -1;
@@ -157,7 +163,7 @@ package
 		{
 			f4se = obj;
 			plugin = f4se && f4se.plugins ? f4se.plugins.NearestQuestTracker : null;
-			Log("onF4SEObjCreated; plugin " + (plugin ? Members(plugin) : "not found"));
+			Log("onF4SEObjCreated (build " + BUILD + "); plugin " + (plugin ? Members(plugin) : "not found"));
 			if (plugin)
 			{
 				try
@@ -226,12 +232,18 @@ package
 				if (asEvent == "Cancel")
 				{
 					CancelSearch();
+					escUpFrames = 0;
 				}
 				return true;    // R, Пробел и прочее при вводе — буквы
 			}
 			if (asEvent == "Cancel")
 			{
-				if (getTimer() - typingEndedAt > 300)
+				escUpFrames = 0;
+				if (escEndedTyping)
+				{
+					escEndedTyping = false;
+				}
+				else
 				{
 					Close("Cancel");
 				}
@@ -266,6 +278,7 @@ package
 		private function OnAddedToStage(e:Event):void
 		{
 			stage.addEventListener(KeyboardEvent.KEY_DOWN, OnKeyDown);
+			stage.addEventListener(KeyboardEvent.KEY_UP, OnKeyUp);
 			stage.addEventListener(MouseEvent.MOUSE_DOWN, OnStageMouseDown);
 			stage.addEventListener(MouseEvent.MOUSE_MOVE, OnMouseMove);
 			stage.addEventListener(MouseEvent.MOUSE_WHEEL, OnWheel);
@@ -275,6 +288,17 @@ package
 		// Скрипт не ответил на действие (root1.Refresh не пришёл) — обновиться самим; в логе видно, что так вышло.
 		private function OnFrame(e:Event):void
 		{
+			if (escUpFrames > 0 && --escUpFrames == 0)
+			{
+				if (escEndedTyping)
+				{
+					escEndedTyping = false;
+				}
+				else if (!typing)
+				{
+					Close("Esc up, no Cancel");
+				}
+			}
 			if (waitFrames > 0 && --waitFrames == 0)
 			{
 				Log("no Refresh from the script after an action: refreshing by timer");
@@ -294,16 +318,13 @@ package
 				else if (e.keyCode == 27)
 				{
 					CancelSearch();
+					escEndedTyping = true;
 				}
 				return;
 			}
 			switch (e.keyCode)
 			{
-				case 27:
-					if (getTimer() - typingEndedAt > 300)
-					{
-						Close("Esc");
-					}
+				case 27:    // закрытие — на отпускании ("Cancel" / OnKeyUp)
 					break;
 				case 37:
 					Navigate(-1, 0);
@@ -335,6 +356,14 @@ package
 						Log("input: key " + e.keyCode);
 					}
 					break;
+			}
+		}
+
+		private function OnKeyUp(e:KeyboardEvent):void
+		{
+			if (e.keyCode == 27)
+			{
+				escUpFrames = 10;
 			}
 		}
 
@@ -1299,11 +1328,15 @@ package
 			searchField.mouseEnabled = true;
 			searchField.maxChars = 40;
 			searchField.addEventListener(Event.CHANGE, OnSearchChange);
-			// Тест: с embedFonts набранное рисуется квадратиками (буквы ищутся во встроенных шрифтах SWF). Как в FallUI
-			// (M8r FontLoader.applyFontOnly: для ванильных "$MAIN_Font" и т.п. embedFonts = false): шрифт берётся
-			// по имени через fontconfig игры, где у $MAIN_Font есть кириллица.
-			searchField.embedFonts = false;
+			// Тест (2026-10-12): набранное в поле ввода рисуется квадратиками и с embedFonts = true (+ setTextFormat), и с
+			// false, как у FallUI (там меню ванильное; у нашего, видимо, нет шрифтов по имени). Коды букв приходят верные
+			// (лог "search: text"), поэтому поле невидимое, а текст показывает обычная надпись (SetText, как всё в окне).
+			searchField.alpha = 0;
 			searchBox.addChild(searchField);
+			searchShown = MakeField(18, TextFormatAlign.LEFT, SEARCH_W - 16, false);
+			searchShown.x = 8;
+			searchShown.y = (SEARCH_H - 28) / 2;
+			searchBox.addChild(searchShown);
 			searchBox.buttonMode = true;
 			searchBox.addEventListener(MouseEvent.CLICK, OnSearchClick);
 			panel.addChild(searchBox);
@@ -1575,6 +1608,7 @@ package
 			{
 				SetText(searchField, searchText[tab]);
 			}
+			SetTail(searchShown, searchField.text + (typing ? "|" : ""));
 			SetText(searchHint, T("Поиск по названию", "Search by name"));
 			searchHint.visible = searchField.text == "";
 		}
@@ -1609,7 +1643,6 @@ package
 				return;
 			}
 			ReleaseTextInput();
-			typingEndedAt = getTimer();
 			stage.focus = null;
 			Log("search: '" + searchText[tab] + "' -> " + shown.length + " rows");
 			ShowAll();
@@ -1756,6 +1789,19 @@ package
 			var fmt:TextFormat = tf.defaultTextFormat;
 			tf.text = s != null ? s : "";
 			tf.setTextFormat(fmt);
+		}
+
+		// Как SetCell, но не влезает — видно конец («…» в начале): так виден набираемый текст.
+		private static function SetTail(tf:TextField, s:String):void
+		{
+			SetText(tf, s);
+			var limit:Number = tf.width - 6;
+			var cut:int = 0;
+			while (tf.textWidth > limit && cut < s.length)
+			{
+				cut++;
+				SetText(tf, "…" + s.substr(cut));
+			}
 		}
 
 		// Текст ячейки; не влезает в ширину — обрезается с «…».
