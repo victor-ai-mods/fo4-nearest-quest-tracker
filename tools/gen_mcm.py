@@ -94,7 +94,7 @@ STRINGS = {
         'INCLUDE_STARTS': 'Pick new quests',
         'INCLUDE_STARTS_HELP': 'Places where quests you have not started yet begin (quest givers). The marker goes '
                                'away once the quest starts.',
-        'INCLUDE_RADIANT': 'Pick radiant quests',
+        'INCLUDE_RADIANT': 'Pick radiant quest givers',
         'INCLUDE_RADIANT_HELP': 'Givers of repeatable quests (Preston Garvey, Proctor Quinlan, PAM...) while they have '
                                 'a task to give right now.',
         'NO_SPOILERS': 'No spoilers',
@@ -176,7 +176,7 @@ STRINGS = {
         'INCLUDE_STARTS': 'Выбирать новые квесты',
         'INCLUDE_STARTS_HELP': 'Места, где начинаются ещё не начатые квесты (квестодатели). Маркер пропадает, когда '
                                'квест начат.',
-        'INCLUDE_RADIANT': 'Выбирать радиантные квесты',
+        'INCLUDE_RADIANT': 'Выбирать квестодателей радиантных квестов',
         'INCLUDE_RADIANT_HELP': 'Квестодатели повторяемых квестов (Престон Гарви, проктор Квинлан, ПАМ…), пока у них '
                                 'есть задание для вас.',
         'NO_SPOILERS': 'Без спойлеров',
