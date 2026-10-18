@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 project(
 	NearestQuestTracker
-	VERSION 2.2.0
+	VERSION 2.3.0
 	LANGUAGES CXX
 )
 
