@@ -189,24 +189,26 @@ namespace NQT
 		}
 
 		// BGSLocAlias::IsLocAlias (OG id 78630): the alias itself if its QType is the location alias type.
-		// AE has no such function (inlined); BGSLocAlias has no subclasses, so its vtable says the same.
+		// NG and AE have no such function (inlined, no id); BGSLocAlias has no subclasses, so its vtable says the same
+		// (vtable id 1011963 is shared by all three databases; NG RTTI checked).
 		[[nodiscard]] bool IsLocAlias(const RE::BGSBaseAlias* a_alias)
 		{
-#ifdef NQT_AE
-			return a_alias && *reinterpret_cast<const std::uintptr_t*>(a_alias) == RE::VTABLE::BGSLocAlias[0].address();
-#else
-			using func_t = const RE::BGSBaseAlias*(const RE::BGSBaseAlias*);
-			static REL::Relocation<func_t*> func{ REL::ID(78630) };
-			return func(a_alias) != nullptr;
+#ifndef NQT_AE
+			if (!REL::Module::IsNG()) {
+				using func_t = const RE::BGSBaseAlias*(const RE::BGSBaseAlias*);
+				static REL::Relocation<func_t*> func{ REL::ID(78630) };
+				return func(a_alias) != nullptr;
+			}
 #endif
+			return a_alias && *reinterpret_cast<const std::uintptr_t*>(a_alias) == RE::VTABLE::BGSLocAlias[0].address();
 		}
 
-		// TESQuest::GetAliasedLoc (OG id 1552479, rva 5DD0A0; AE id 2207812): the location an alias of a running quest holds;
+		// TESQuest::GetAliasedLoc (OG id 1552479, rva 5DD0A0; NG/AE id 2207812): the location an alias of a running quest holds;
 		// takes aliasAccessLock itself.
 		[[nodiscard]] RE::BGSLocation* GetAliasedLoc(const RE::TESQuest& a_quest, std::uint32_t a_aliasID)
 		{
 			using func_t = RE::BGSLocation*(const RE::TESQuest*, std::uint32_t);
-			static REL::Relocation<func_t*> func{ REL::ID(GameID(1552479, 2207812)) };
+			static REL::Relocation<func_t*> func{ GameID(1552479, 2207812) };
 			return func(&a_quest, a_aliasID);
 		}
 
@@ -240,22 +242,22 @@ namespace NQT
 			return nullptr;
 		}
 
-		// TESFaction::GetPCAnEnemy (OG id 586385, AE id 2207180): what GetPlayerEnemyofFaction / Faction.IsPlayerEnemy read
+		// TESFaction::GetPCAnEnemy (OG id 586385, NG/AE id 2207180): what GetPlayerEnemyofFaction / Faction.IsPlayerEnemy read
 		// (Faction.SetPlayerEnemy; also a crime enemy that wears off).
 		[[nodiscard]] bool GetPCAnEnemy(const RE::TESFaction& a_faction)
 		{
 			using func_t = bool(const RE::TESFaction*);
-			static REL::Relocation<func_t*> func{ REL::ID(GameID(586385, 2207180)) };
+			static REL::Relocation<func_t*> func{ GameID(586385, 2207180) };
 			return func(&a_faction);
 		}
 
-		// TESReactionForm::GetFactionCombatRelation (OG id 167267, AE id 2193377): the fight reaction toward a_other; 1 = enemy,
+		// TESReactionForm::GetFactionCombatRelation (OG id 167267, NG/AE id 2193377): the fight reaction toward a_other; 1 = enemy,
 		// what Faction.SetEnemy sets both ways (mem_Faction_SetEnemy -> TESFaction::SetFactionFightReaction(.., 1)).
 		// TESFaction's TESReactionForm is at +0x30 (TESFaction::GetFactionReaction, OG rva 5A5970).
 		[[nodiscard]] std::int32_t GetCombatRelation(const RE::TESFaction& a_faction, const RE::TESForm* a_other)
 		{
 			using func_t = std::int32_t(const void*, const RE::TESForm*);
-			static REL::Relocation<func_t*> func{ REL::ID(GameID(167267, 2193377)) };
+			static REL::Relocation<func_t*> func{ GameID(167267, 2193377) };
 			return func(reinterpret_cast<const std::byte*>(&a_faction) + 0x30, a_other);
 		}
 
@@ -286,12 +288,12 @@ namespace NQT
 
 		// --- Radiant offers: the giver's offer lines evaluated by the engine -----------------------------------
 
-		// TESConditionItem::IsTrue(ConditionCheckParams&) (OG id 43452, AE id 2212009): one condition with the quest scope set,
+		// TESConditionItem::IsTrue(ConditionCheckParams&) (OG id 43452, NG/AE id 2212009): one condition with the quest scope set,
 		// so GetIsAliasRef reads the line's quest.
 		[[nodiscard]] bool ItemIsTrue(RE::TESConditionItem& a_item, RE::ConditionCheckParams& a_params)
 		{
 			using func_t = bool(RE::TESConditionItem*, RE::ConditionCheckParams&);
-			static REL::Relocation<func_t*> func{ REL::ID(GameID(43452, 2212009)) };
+			static REL::Relocation<func_t*> func{ GameID(43452, 2212009) };
 			return func(&a_item, a_params);
 		}
 
@@ -363,7 +365,7 @@ namespace NQT
 			return false;
 		}
 
-		// Actor::CalculateFactionFightReaction (OG id 339469, rva DA3190; AE id 2230091): how a_actor would react to a_other -
+		// Actor::CalculateFactionFightReaction (OG id 339469, rva DA3190; NG/AE id 2230091): how a_actor would react to a_other -
 		// factions with the ref's own changes (FactionUtil::IntegrateFactionArrays), the crime faction's
 		// GetPCAnEnemy, Actor::IsAngryWithPlayer (assault), relationships. Actor::GetFactionFightReaction calls it
 		// with false when the actor has no AI process; with one it goes through AIProcess::CreateActorKnowledge,
@@ -371,7 +373,7 @@ namespace NQT
 		[[nodiscard]] std::int32_t CalculateFightReaction(RE::Actor& a_actor, RE::Actor& a_other)
 		{
 			using func_t = std::int32_t(RE::Actor*, RE::Actor*, bool);
-			static REL::Relocation<func_t*> func{ REL::ID(GameID(339469, 2230091)) };
+			static REL::Relocation<func_t*> func{ GameID(339469, 2230091) };
 			return func(&a_actor, &a_other, false);
 		}
 

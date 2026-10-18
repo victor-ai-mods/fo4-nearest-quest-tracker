@@ -12,14 +12,16 @@ using namespace std::literals;
 
 namespace NQT
 {
-	// Address Library id of an engine function this plugin calls itself: OG (1.10.163) or AE (1.11.x) DLL.
-	// AE ids were matched in the 1.11.191 disassembly (tools/fo4_ae.py), see the comment at each use.
-	[[nodiscard]] constexpr std::uint64_t GameID(std::uint64_t a_og, [[maybe_unused]] std::uint64_t a_ae) noexcept
+	// Address Library id of an engine function this plugin calls itself. NG (1.10.984) and AE (1.11.x) share the
+	// id (the AE databases keep the NG ids of matching functions), so one number serves both: the OG + NG DLL picks
+	// by runtime, the AE DLL takes it. AE ids were matched in the 1.11.191 disassembly (tools/fo4_ae.py), the NG
+	// code at the same id compared with AE (tools/fo4_ng.py cmp), see the comment at each use.
+	[[nodiscard]] constexpr auto GameID([[maybe_unused]] std::uint64_t a_og, std::uint64_t a_ngae) noexcept
 	{
 #ifdef NQT_AE
-		return a_ae;
+		return REL::ID(a_ngae);
 #else
-		return a_og;
+		return REL::RelocationID(a_og, a_ngae);
 #endif
 	}
 }

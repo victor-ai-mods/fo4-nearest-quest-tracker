@@ -1,6 +1,7 @@
 [submodule "f4se_plugin/extern/CommonLibF4"]
 	path = f4se_plugin/extern/CommonLibF4
-	url = https://github.com/alandtse/CommonLibF4.git
+	url = https://github.com/victor-ai-mods/CommonLibF4.git
+	branch = nqt-ng-ids
 [submodule "f4se_plugin/extern/commonlibf4-ae"]
 	path = f4se_plugin/extern/commonlibf4-ae
 	url = https://github.com/libxse/commonlibf4.git

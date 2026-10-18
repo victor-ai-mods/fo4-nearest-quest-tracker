@@ -14,7 +14,8 @@ endif()
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 # Two DLLs from one source: 1.10.163 (OG) + 1.10.984 (NG) on alandtse/CommonLibF4, and 1.11.x (AE) on
-# libxse/commonlibf4 (AE address IDs differ from NG ones, alandtse has none). VR is not a target.
+# libxse/commonlibf4 (alandtse has no 1.11.x ids). VR is not a target. extern/CommonLibF4 is the
+# victor-ai-mods fork, branch nqt-ng-ids: NG ids for the alandtse functions NQT reaches that had OG ids only.
 option(NQT_AE "build for Fallout 4 AE 1.11.x (libxse/commonlibf4)" OFF)
 if(NQT_AE)
 	add_subdirectory(extern/commonlibf4-ae/lib/commonlib-shared commonlib-shared EXCLUDE_FROM_ALL)

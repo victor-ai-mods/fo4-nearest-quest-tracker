@@ -3,7 +3,8 @@
 // Quest-target structures that CommonLibF4 only forward-declares. Layouts were read from
 // the Fallout4.exe 1.10.163 disassembly (constructors, BGSQuestObjective::Load/SetState,
 // TeleportPath::ComputeLength, TESQuestTarget::REF_DATA::GetReference); only the members
-// this plugin reads are named. NG (1.10.984) layouts are not verified yet: see main.cpp.
+// this plugin reads are named. AE (1.11.191) code reads them at the same offsets; NG (1.10.984) code of these
+// functions is the AE code (tools/fo4_ng.py cmp, 2026-10-18: ComputeLength, IsStageDone, PipboyQuestData vtable).
 namespace NQT::Engine
 {
 	// QUEST_OBJECTIVE_STATE values (BGSQuestObjective::SetState: 1 -> OnObjectiveDisplayed,

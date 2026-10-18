@@ -73,14 +73,6 @@ extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Load(const F4SE::LoadInterface* a_f
 	F4SE::Init(a_f4se);
 	logger::info("game runtime {}, F4SE {}"sv, a_f4se->RuntimeVersion().string(), a_f4se->F4SEVersion().string());
 
-#ifndef NQT_AE
-	// Quest-target layouts (EngineTypes.h) are verified on 1.10.163 only; NG is stage 3c.
-	if (REL::Module::IsNG()) {
-		logger::warn("next-gen runtime is not supported yet; native functions not registered"sv);
-		return true;
-	}
-#endif
-
 	if (const auto messaging = F4SE::GetMessagingInterface()) {
 		messaging->RegisterListener(OnF4SEMessage);
 	}

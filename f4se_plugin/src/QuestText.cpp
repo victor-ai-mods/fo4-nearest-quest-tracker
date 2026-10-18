@@ -7,7 +7,8 @@ namespace NQT
 {
 	namespace
 	{
-		// BSStringT<char>::Set (alandtse/CommonLibF4 has no OG id for it).
+		// BSStringT<char>::Set (alandtse/CommonLibF4 has no OG id for it; NG id 2189084 checked in the NG code:
+		// strlen, capacity +0A, MemoryManager::Allocate, size +08, frees the old buffer).
 		void SetString(RE::BSStringT<char>& a_string, const char* a_text)
 		{
 #ifdef NQT_AE
@@ -158,24 +159,26 @@ namespace NQT
 		// sLanguage:General is a static SettingT<INISettingCollection> (OG id 1527977) registered
 		// in INISettingCollection. In game (2026-09-30) CommonLibF4's INISettingCollection::GetSetting
 		// did not find it (reason unknown), the engine's own SettingCollectionList::GetPtr (OG id
-		// 504957, _stricmp) did. GetPtr has no NG id in CommonLibF4, so NG keeps the CommonLibF4
-		// lookup until stage 3c.
+		// 504957, _stricmp) did. GetPtr has no NG or AE id in the libraries: there its own search, case-insensitive
+		// like GetPtr's _stricmp over the same list (OG rva 516D70: settings +0x118, key +0x10).
 		constexpr auto kKey = "sLanguage:General";
 		const auto     collection = RE::INISettingCollection::GetSingleton();
 		RE::Setting*   setting = nullptr;
 		if (collection) {
-#ifdef NQT_AE
-			// No AE id for GetPtr yet: its own search, case-insensitive like its _stricmp.
-			for (const auto entry : collection->settings) {
-				const auto key = entry ? entry->GetKey() : ""sv;
-				if (key.size() == std::char_traits<char>::length(kKey) && _strnicmp(key.data(), kKey, key.size()) == 0) {
-					setting = entry;
-					break;
+#ifndef NQT_AE
+			if (!REL::Module::IsNG()) {
+				setting = collection->GetPtr(kKey);
+			} else
+#endif
+			{
+				for (const auto entry : collection->settings) {
+					const auto key = entry ? entry->GetKey() : ""sv;
+					if (key.size() == std::char_traits<char>::length(kKey) && _strnicmp(key.data(), kKey, key.size()) == 0) {
+						setting = entry;
+						break;
+					}
 				}
 			}
-#else
-			setting = REL::Module::IsNG() ? collection->GetSetting(kKey) : collection->GetPtr(kKey);
-#endif
 		}
 
 		std::string language;
