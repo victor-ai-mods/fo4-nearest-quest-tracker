@@ -18,7 +18,17 @@ DLL загрузилась через MO2 (usvfs: путь к Address Library н
 Повторный запуск 2026-10-18: пользователь проверил всё — F1, F4, окно (обе вкладки, отметка кликом), Pip-Boy-текст
 цели старта, предмет в избранном. **AE-3 пройден.** Дальше — AE-4 (квесты Creation Club).
 
-## AE-4: квесты Creation Club (2026-10-18, в работе)
+## AE-5: релиз 2.2.0 (2026-10-18, в работе)
+
+Решения пользователя: 2.2.0 сразу для OG и AE (на Nexus два файла), NG — позже; DIAG HUD убрана из релиза (745d269).
+Address Library «All In One» 1.11.240 (Nexus 47327 file 408268) распакована в `_research\address-library-aio`: все 7
+наших AE-адресов и все 1092 ID libxse `IDs.h` есть в базах 1.11.137 / 159 / 169 / 191 / 221 / 240 (rva сдвигаются на
+десятки байт — те же функции). Там же база NG 1.10.984 — для NG-версии.
+`python tools/package.py 2.2.0 [--ae]` → `release/NearestQuestTracker[-AE]-2.2.0.zip`. Release-DLL разложены: OG — в
+основную игру, AE — на стенд. Дальше: проверка в игре (OG + AE), README en/ru, GitHub (push + tag), Nexus (файл
+2.2.0 вместо 2.1.0, новый файл AE, описание, changelog).
+
+## AE-4: квесты Creation Club (2026-10-18, сделано)
 
 **Проверено в игре 2026-10-18:** раздел Creation Club 0/65, CC-старты с расстояниями, «Dog Rescue – Find the …»
 различаются; отметки Neon Winter (интерьер, Добрососедство), Dog Rescue (Dalmatian, снаружи), A Home for the Family
