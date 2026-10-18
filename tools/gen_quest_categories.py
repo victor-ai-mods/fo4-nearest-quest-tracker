@@ -8,9 +8,13 @@
 добавляются по соответствию разделов EN_SECTIONS. Остальное — вручную в MANUAL.
 Английские названия категорий — из таблицы TITLES (en-страница устроена по-другому).
 
+Creation Club (AE 1.11.x): на ru-вики раздела нет, на en-вики — только список названий, поэтому квесты берутся из самих
+cc-плагинов AE: все QUST с целями (кроме CC_SKIP) -> «Дополнения / Creation Club». Нужен индекс AE
+(python tools/esm_index.py --ae); без него раздел не строится. Названия в JSON — из строк cc-плагинов (ba2_strings.py).
+
 Wikitext страниц кэшируется в tools/cache/ (чужой текст, в репозиторий не кладётся); --refresh — скачать заново.
 
-python tools/gen_quest_categories.py [--refresh] [--index <pickle>]
+python tools/gen_quest_categories.py [--refresh] [--index <pickle>] [--ae-index <pickle>]
 """
 
 import argparse
@@ -26,6 +30,14 @@ ROOT = os.path.dirname(HERE)
 CACHE = os.path.join(HERE, 'cache')
 OUT_DIR = os.path.join(ROOT, 'mod', 'F4SE', 'Plugins', 'NearestQuestTracker')
 DEFAULT_INDEX = os.path.join(ROOT, '..', '_research', 'nqt-quests', 'esm_index.pickle')
+DEFAULT_AE_INDEX = os.path.join(ROOT, '..', '_research', 'nqt-quests', 'esm_index_ae.pickle')
+AE_DATA = r'D:\Games\F4_AE\Data'
+
+# Creation Club: категория и квесты с целями, которые не квесты игрока.
+CC_CATEGORY = {'key': 'dlc.cc', 'ru': 'Creation Club', 'en': 'Creation Club'}
+CC_SKIP = {
+    'ccOTMFO4001-Remnants.esl|0000E8',  # ccOTMFO4001_VB «Vertibird Scene Controller»: цель «VB Location» — служебная
+}
 
 PAGES = {
     'ru': ('https://fallout.fandom.com/ru/api.php', 'Квесты Fallout 4'),
@@ -231,6 +243,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--refresh', action='store_true', help='download the wiki pages again')
     ap.add_argument('--index', default=DEFAULT_INDEX)
+    ap.add_argument('--ae-index', default=DEFAULT_AE_INDEX)
     a = ap.parse_args()
 
     with open(a.index, 'rb') as f:
@@ -289,6 +302,27 @@ def main():
 
     for key, cat in MANUAL.items():
         assigned[key] = (cat, index['quests'][key].get('edid', ''))
+
+    # --- Creation Club (AE): квесты с целями из cc-плагинов ---
+    if os.path.exists(a.ae_index):
+        from ba2_strings import StringTables
+        with open(a.ae_index, 'rb') as f:
+            ae = pickle.load(f)
+        strings = StringTables(AE_DATA)
+        categories.setdefault(CC_CATEGORY['key'], dict(CC_CATEGORY))
+        cc = 0
+        for key, q in sorted(ae['quests'].items()):
+            plugin = key.split('|')[0]
+            if not plugin.lower().startswith('cc') or not q['objectives'] or key in CC_SKIP:
+                continue
+            name = (q.get('full') is not None and (strings.text(plugin, q['full'], 'ru')
+                                                   or strings.text(plugin, q['full'], 'en'))) or q.get('edid', '')
+            assigned[key] = (CC_CATEGORY['key'], name)
+            index['quests'][key] = q
+            cc += 1
+        report.append('cc: %d quests from %s' % (cc, a.ae_index))
+    else:
+        report.append('cc: no AE index %s - Creation Club category not built' % a.ae_index)
 
     # Квесты-указатели («Разное» в Pip-Boy: FFDiamondCity01Misc, BoSM01Pointer, MS07cPostQuest…): на вики их нет,
     # editor ID начинается с editor ID квеста с вики -> его категория. Только квесты с целями (без целей в Pip-Boy

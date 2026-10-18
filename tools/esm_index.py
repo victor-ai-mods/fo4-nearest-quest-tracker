@@ -10,6 +10,8 @@
 Ключ формы везде — строка "Plugin.esm|XXXXXX" (локальный ID без байта индекса).
 
 python tools/esm_index.py [--out <pickle>]
+python tools/esm_index.py --ae [--out <pickle>]   — AE 1.11.x: мастера + все cc-плагины из Fallout4.ccc
+                                                   (D:\\Games\\F4_AE, по умолчанию esm_index_ae.pickle)
 """
 
 import argparse
@@ -23,6 +25,16 @@ MASTERS = ['Fallout4.esm', 'DLCRobot.esm', 'DLCworkshop01.esm', 'DLCCoast.esm',
            'DLCworkshop02.esm', 'DLCworkshop03.esm', 'DLCNukaWorld.esm']
 DEFAULT_OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '_research',
                            'nqt-quests', 'esm_index.pickle')
+AE_GAME = r'D:\Games\F4_AE'
+AE_OUT = os.path.join(os.path.dirname(DEFAULT_OUT), 'esm_index_ae.pickle')
+
+
+def cc_plugins(game):
+    """Creation Club plugins in load order (Fallout4.ccc), those present in Data."""
+    with open(os.path.join(game, 'Fallout4.ccc'), encoding='utf-8') as f:
+        names = [ln.strip() for ln in f if ln.strip()]
+    present = {n.lower(): n for n in os.listdir(os.path.join(game, 'Data'))}
+    return [present[n.lower()] for n in names if n.lower() in present]
 
 COMPRESSED = 0x00040000
 REC = struct.Struct('<4sIIIIHH')
@@ -228,12 +240,16 @@ class Indexer:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--out', default=DEFAULT_OUT)
+    ap.add_argument('--out')
+    ap.add_argument('--ae', action='store_true')
     a = ap.parse_args()
+    game = AE_GAME if a.ae else GAME
+    plugins = MASTERS + (cc_plugins(game) if a.ae else [])
+    a.out = a.out or (AE_OUT if a.ae else DEFAULT_OUT)
     ix = Indexer()
-    for m in MASTERS:
+    for m in plugins:
         print('reading', m, flush=True)
-        ix.load(os.path.join(GAME, 'Data', m))
+        ix.load(os.path.join(game, 'Data', m))
     data = {k: getattr(ix, k) for k in ('quests', 'infos', 'refs', 'bases', 'cells', 'worlds', 'dials')}
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
     with open(a.out, 'wb') as f:

@@ -307,6 +307,11 @@
    "key": "dlc.nukaworld.unmarked",
    "ru": "Неотмечаемые квесты",
    "en": "Unmarked quests"
+  },
+  {
+   "key": "dlc.cc",
+   "ru": "Creation Club",
+   "en": "Creation Club"
   }
  ],
  "quests": [
@@ -2283,6 +2288,396 @@
    "category": "dlc.nukaworld.main",
    "edid": "DLC04ShankMiscObjective",
    "name": "DLC04ShankMiscObjective"
+  },
+  {
+   "quest": "ccBGSFO4044-HellfirePowerArmor.esl|00086C",
+   "category": "dlc.cc",
+   "edid": "ccBGSFO4044_HellfireBossKillQuest",
+   "name": "Пироман"
+  },
+  {
+   "quest": "ccBGSFO4046-TesCan.esl|000846",
+   "category": "dlc.cc",
+   "edid": "ccBGSFO4046_BestOfThree",
+   "name": "До трех побед"
+  },
+  {
+   "quest": "ccBGSFO4115-X02.esl|000845",
+   "category": "dlc.cc",
+   "edid": "ccBGSFO4115_DM_Quest",
+   "name": "Помянешь черта..."
+  },
+  {
+   "quest": "ccBGSFO4115-X02.esl|000A24",
+   "category": "dlc.cc",
+   "edid": "ccBGSFO4115_EnclaveRadioQuest",
+   "name": "Радио Анклава"
+  },
+  {
+   "quest": "ccBGSFO4116-HeavyFlamer.esl|000FC4",
+   "category": "dlc.cc",
+   "edid": "ccBGSFO4116_Quest",
+   "name": "Горнило"
+  },
+  {
+   "quest": "ccFSVFO4007-Halloween.esl|000271",
+   "category": "dlc.cc",
+   "edid": "ccFSVFO4007_Quest",
+   "name": "День Всех Святых"
+  },
+  {
+   "quest": "ccOTMFO4001-Remnants.esl|0000E7",
+   "category": "dlc.cc",
+   "edid": "ccOTMFO4001_Quest",
+   "name": "Эхо былой славы"
+  },
+  {
+   "quest": "ccOTMFO4001-Remnants.esl|0004A1",
+   "category": "dlc.cc",
+   "edid": "ccOTMFO4001_Encampment01MiscObj",
+   "name": "ccOTMFO4001_Encampment01MiscObj"
+  },
+  {
+   "quest": "ccOTMFO4001-Remnants.esl|0004A2",
+   "category": "dlc.cc",
+   "edid": "ccOTMFO4001_Encampment02MiscObj",
+   "name": "ccOTMFO4001_Encampment02MiscObj"
+  },
+  {
+   "quest": "ccOTMFO4001-Remnants.esl|0004A3",
+   "category": "dlc.cc",
+   "edid": "ccOTMFO4001_Encampment03MiscObj",
+   "name": "ccOTMFO4001_Encampment03MiscObj"
+  },
+  {
+   "quest": "ccSBJFO4003-Grenade.esl|00012A",
+   "category": "dlc.cc",
+   "edid": "ccSBJFO4003_Quest",
+   "name": "Полет свиньи"
+  },
+  {
+   "quest": "ccacxfo4001-vsuit.esl|000BDD",
+   "category": "dlc.cc",
+   "edid": "ccACXFO4001_Quest",
+   "name": "В поисках костюма"
+  },
+  {
+   "quest": "ccawnfo4002-factionclothing.esl|00000F",
+   "category": "dlc.cc",
+   "edid": "ccAWNFO4002_Quest",
+   "name": "Тайник"
+  },
+  {
+   "quest": "ccawnfo4002-factionclothing.esl|000069",
+   "category": "dlc.cc",
+   "edid": "ccAWNFO4002_Quest2",
+   "name": "Смерть в процессе доставки"
+  },
+  {
+   "quest": "ccbgsfo4018-gaussrifleprototype.esl|000802",
+   "category": "dlc.cc",
+   "edid": "ccBGSFO4018_StartupQuest",
+   "name": "Прототип"
+  },
+  {
+   "quest": "ccbgsfo4019-chinesestealtharmor.esl|000800",
+   "category": "dlc.cc",
+   "edid": "ccBGSFO4019_StartupQuest",
+   "name": "Ну что, меня видно?"
+  },
+  {
+   "quest": "ccbgsfo4035-pint.esl|00082E",
+   "category": "dlc.cc",
+   "edid": "ccBGSFO4035_PintSizedSlasherQuest",
+   "name": "Крохотная проблема"
+  },
+  {
+   "quest": "ccbgsfo4038-horsearmor.esl|000872",
+   "category": "dlc.cc",
+   "edid": "ccBGSFO4038_HorseArmorFetchQuest",
+   "name": "\"Лютик\""
+  },
+  {
+   "quest": "ccbgsfo4042-bfg.esl|00081E",
+   "category": "dlc.cc",
+   "edid": "ccBGSFO4042_BFGQuest",
+   "name": "Из преисподней"
+  },
+  {
+   "quest": "ccbgsfo4047-qthund.esl|000832",
+   "category": "dlc.cc",
+   "edid": "BGSFO4047_DeathmatchQuest",
+   "name": "Перестрелка"
+  },
+  {
+   "quest": "ccbgsfo4048-dovah.esl|000FF3",
+   "category": "dlc.cc",
+   "edid": "ccBGSFO4048_DovahQuest",
+   "name": "Актерская игра"
+  },
+  {
+   "quest": "ccbgsfo4049-brahminarmor.esl|000004",
+   "category": "dlc.cc",
+   "edid": "ccBGSFO4049_WorkshopQuest",
+   "name": "ccBGSFO4049_WorkshopQuest"
+  },
+  {
+   "quest": "ccbgsfo4049-brahminarmor.esl|000800",
+   "category": "dlc.cc",
+   "edid": "ccBGSFO4049_Quest",
+   "name": "Коровье бешенство"
+  },
+  {
+   "quest": "ccbgsfo4050-dgbcoll.esl|000803",
+   "category": "dlc.cc",
+   "edid": "ccBGSFO4050DogAcquireQuest",
+   "name": "Спасение собак"
+  },
+  {
+   "quest": "ccbgsfo4051-dgbox.esl|000803",
+   "category": "dlc.cc",
+   "edid": "ccBGSFO4051DogAcquireQuest",
+   "name": "Спасение собак"
+  },
+  {
+   "quest": "ccbgsfo4052-dgdal.esl|000803",
+   "category": "dlc.cc",
+   "edid": "ccBGSFO4052DogAcquireQuest",
+   "name": "Спасение собак"
+  },
+  {
+   "quest": "ccbgsfo4053-dggoldr.esl|000803",
+   "category": "dlc.cc",
+   "edid": "ccBGSFO4053DogAcquireQuest",
+   "name": "Спасение собак"
+  },
+  {
+   "quest": "ccbgsfo4054-dggreatd.esl|000803",
+   "category": "dlc.cc",
+   "edid": "ccBGSFO4054DogAcquireQuest",
+   "name": "Спасение собак"
+  },
+  {
+   "quest": "ccbgsfo4055-dghusk.esl|000803",
+   "category": "dlc.cc",
+   "edid": "ccBGSFO4055DogAcquireQuest",
+   "name": "Спасение собак"
+  },
+  {
+   "quest": "ccbgsfo4056-dglabb.esl|000803",
+   "category": "dlc.cc",
+   "edid": "ccBGSFO4056DogAcquireQuest",
+   "name": "Спасение собак"
+  },
+  {
+   "quest": "ccbgsfo4057-dglaby.esl|000803",
+   "category": "dlc.cc",
+   "edid": "ccBGSFO4057DogAcquireQuest",
+   "name": "Спасение собак"
+  },
+  {
+   "quest": "ccbgsfo4058-dglabc.esl|000803",
+   "category": "dlc.cc",
+   "edid": "ccBGSFO4058DogAcquireQuest",
+   "name": "Спасение собак"
+  },
+  {
+   "quest": "ccbgsfo4059-dgpit.esl|000803",
+   "category": "dlc.cc",
+   "edid": "ccBGSFO4059DogAcquireQuest",
+   "name": "Спасение собак"
+  },
+  {
+   "quest": "ccbgsfo4060-dgrot.esl|000803",
+   "category": "dlc.cc",
+   "edid": "ccBGSFO4060DogAcquireQuest",
+   "name": "Спасение собак"
+  },
+  {
+   "quest": "ccbgsfo4061-dgshiinu.esl|000803",
+   "category": "dlc.cc",
+   "edid": "ccBGSFO4061DogAcquireQuest",
+   "name": "Спасение собак"
+  },
+  {
+   "quest": "ccbgsfo4117-capmerc.esl|000738",
+   "category": "dlc.cc",
+   "edid": "ccBGSFO4117_Quest",
+   "name": "Борьба за правое дело"
+  },
+  {
+   "quest": "ccbgsfo4117-capmerc.esl|0009BE",
+   "category": "dlc.cc",
+   "edid": "ccBGSFO4117_GunnerKillCount",
+   "name": "ccBGSFO4117_GunnerKillCount"
+  },
+  {
+   "quest": "ccbgsfo4119-cyberdog.esl|000004",
+   "category": "dlc.cc",
+   "edid": "ccBGSFO4119_WorkshopQuest",
+   "name": "ccBGSFO4119_WorkshopQuest"
+  },
+  {
+   "quest": "ccbgsfo4119-cyberdog.esl|000800",
+   "category": "dlc.cc",
+   "edid": "ccBGSFO4119_Quest",
+   "name": "Кто лает..."
+  },
+  {
+   "quest": "cceejfo4002-nuka.esl|000C06",
+   "category": "dlc.cc",
+   "edid": "ccEEJFO4002_MainQuest",
+   "name": "Хлопоты о газировке"
+  },
+  {
+   "quest": "ccfrsfo4002-antimaterielrifle.esl|0008A2",
+   "category": "dlc.cc",
+   "edid": "ccFRSFO4002_pm_quest",
+   "name": "Бумажное зеркало"
+  },
+  {
+   "quest": "ccfrsfo4003-cr75l.esl|000846",
+   "category": "dlc.cc",
+   "edid": "ccFRSFO4003_WBH_Quest",
+   "name": "Назад домой"
+  },
+  {
+   "quest": "ccfrsfo4003-cr75l.esl|00085B",
+   "category": "dlc.cc",
+   "edid": "ccFRSFO4003_Rifle_Quest",
+   "name": "Готов к бою"
+  },
+  {
+   "quest": "ccfrsfo4003-cr75l.esl|0008F7",
+   "category": "dlc.cc",
+   "edid": "ccFRSFO4003_LilyTerminalCheck",
+   "name": "Могила Лили"
+  },
+  {
+   "quest": "ccfsvfo4003-slocum.esl|0008C6",
+   "category": "dlc.cc",
+   "edid": "ccFSVFO4003_SlocumsUnlockQuest",
+   "name": "Слокам Джо"
+  },
+  {
+   "quest": "ccgcafo4024-instituteplasmaweapons.esl|000972",
+   "category": "dlc.cc",
+   "edid": "ccGCAFO4024_Quest",
+   "name": "Помощь нуждающимся"
+  },
+  {
+   "quest": "ccgcafo4025-pagunmm.esl|000831",
+   "category": "dlc.cc",
+   "edid": "ccGCAFO4025_Quest",
+   "name": "Боевая раскраска"
+  },
+  {
+   "quest": "ccjvdfo4001-holiday.esl|000961",
+   "category": "dlc.cc",
+   "edid": "ccJVDFO4001_HolidaySpiritQuest",
+   "name": "Праздничное настроение"
+  },
+  {
+   "quest": "cckgjfo4001-bastion.esl|00084D",
+   "category": "dlc.cc",
+   "edid": "ccKGJFO4001_EndlessRaidManager",
+   "name": "Бесконечная война"
+  },
+  {
+   "quest": "ccqdrfo4001_powerarmorai.esl|00084B",
+   "category": "dlc.cc",
+   "edid": "ccQDRFO4001_OutcastQuest",
+   "name": "Зловещая проблема"
+  },
+  {
+   "quest": "ccqdrfo4001_powerarmorai.esl|00098E",
+   "category": "dlc.cc",
+   "edid": "ccQDRFO4001_OptionalVoiceQuest",
+   "name": "ccQDRFO4001_OptionalVoiceQuest"
+  },
+  {
+   "quest": "ccrpsfo4001-scavenger.esl|0001F7",
+   "category": "dlc.cc",
+   "edid": "ccRPSFO4001_ScavengerQuestTwo",
+   "name": "Пропавшие в море"
+  },
+  {
+   "quest": "ccrzrfo4001-tunnelsnakes.esm|000E6B",
+   "category": "dlc.cc",
+   "edid": "ccRZRFO4001_MainQuest",
+   "name": "\"Тоннельные змеи\" рулят!"
+  },
+  {
+   "quest": "ccrzrfo4002-disintegrate.esl|000884",
+   "category": "dlc.cc",
+   "edid": "ccRZRFO4002_OTM_Quest",
+   "name": "Седьмое небо"
+  },
+  {
+   "quest": "ccsbjfo4001-solarflare.esl|0008E7",
+   "category": "dlc.cc",
+   "edid": "ccSBJFO4001_SF_Quest",
+   "name": "Плохой расклад"
+  },
+  {
+   "quest": "ccsbjfo4002_manwellrifle.esl|0008B9",
+   "category": "dlc.cc",
+   "edid": "ccSBJFO4002_Quest",
+   "name": "Квантовый олень"
+  },
+  {
+   "quest": "ccsbjfo4002_manwellrifle.esl|00091B",
+   "category": "dlc.cc",
+   "edid": "ccSBJFO4002_WorkshopQuest",
+   "name": "ccSBJFO4002_WorkshopQuest"
+  },
+  {
+   "quest": "ccsbjfo4004-ion.esl|000F9D",
+   "category": "dlc.cc",
+   "edid": "ccSBJFO4004_Quest",
+   "name": "Безопасность на рабочем месте"
+  },
+  {
+   "quest": "ccswkfo4001-astronautpowerarmor.esm|001894",
+   "category": "dlc.cc",
+   "edid": "ccSWKFO4001_CaptainCosmosQuest",
+   "name": "Капитан Космос"
+  },
+  {
+   "quest": "cctosfo4001-neosky.esm|000C27",
+   "category": "dlc.cc",
+   "edid": "ccTOSFO4001_EarlyRetirementQuest",
+   "name": "Ранняя отставка"
+  },
+  {
+   "quest": "cctosfo4002_neonflats.esm|0017D4",
+   "category": "dlc.cc",
+   "edid": "ccTOSFO4002_Quest",
+   "name": "Неоновая зима"
+  },
+  {
+   "quest": "ccvltfo4001-homes.esm|001DFD",
+   "category": "dlc.cc",
+   "edid": "ccVLTFO4001_Quest",
+   "name": "Дом для семьи"
+  },
+  {
+   "quest": "cczsef04001-bhouse.esm|000D75",
+   "category": "dlc.cc",
+   "edid": "ccZSEFO4001_PlayerHomeQuest",
+   "name": "Место, где можно поселиться"
+  },
+  {
+   "quest": "cczsefo4002-smanor.esm|001137",
+   "category": "dlc.cc",
+   "edid": "ccZSEFO4002_Quest",
+   "name": "Особняк Плаща"
+  },
+  {
+   "quest": "cczsefo4002-smanor.esm|00114D",
+   "category": "dlc.cc",
+   "edid": "ccZSEFO4002_RingQuest",
+   "name": "Серебряное, совсем как Плащ"
   },
   {
    "quest": "DLCCoast.esm|030CBC",
