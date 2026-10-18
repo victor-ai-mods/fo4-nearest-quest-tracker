@@ -1,6 +1,6 @@
 # Nearest Quest Tracker — план версии для AE (Anniversary Edition, 1.11.x)
 
-Статус (2026-10-18): **AE-0..AE-3 сделаны (AE-DLL работает в игре); дальше AE-4 — квесты Creation Club.** AE-DLL собрана
+Статус (2026-10-18): **AE-0..AE-5 сделаны: 2.2.0 с AE-файлом выпущен на GitHub и Nexus.** Дальше — NG. AE-DLL собрана
 (Debug) и разложена на стенд: MO2 `D:\Games\MO2 Fallout 4 AE`, профиль «Nearest Quest Tracker», мод «Nearest Quest
 Tracker (AE dev)». Подробности — раздел «AE-1/AE-2: сделано» ниже. NG — отдельно, когда будет стенд NG (пользователь
 качает игру NG).
@@ -18,15 +18,19 @@ DLL загрузилась через MO2 (usvfs: путь к Address Library н
 Повторный запуск 2026-10-18: пользователь проверил всё — F1, F4, окно (обе вкладки, отметка кликом), Pip-Boy-текст
 цели старта, предмет в избранном. **AE-3 пройден.** Дальше — AE-4 (квесты Creation Club).
 
-## AE-5: релиз 2.2.0 (2026-10-18, в работе)
+## AE-5: релиз 2.2.0 (2026-10-18, ВЫПУЩЕН)
 
 Решения пользователя: 2.2.0 сразу для OG и AE (на Nexus два файла), NG — позже; DIAG HUD убрана из релиза (745d269).
 Address Library «All In One» 1.11.240 (Nexus 47327 file 408268) распакована в `_research\address-library-aio`: все 7
 наших AE-адресов и все 1092 ID libxse `IDs.h` есть в базах 1.11.137 / 159 / 169 / 191 / 221 / 240 (rva сдвигаются на
 десятки байт — те же функции). Там же база NG 1.10.984 — для NG-версии.
 `python tools/package.py 2.2.0 [--ae]` → `release/NearestQuestTracker[-AE]-2.2.0.zip`. Release-DLL разложены: OG — в
-основную игру, AE — на стенд. Дальше: проверка в игре (OG + AE), README en/ru, GitHub (push + tag), Nexus (файл
-2.2.0 вместо 2.1.0, новый файл AE, описание, changelog).
+основную игру, AE — на стенд. Проверено пользователем в игре (Release-сборки): основная игра OG и AE-стенд — всё работает.
+Выпущено 2026-10-18: GitHub — 358a465 + тег v2.2.0, описание репозитория; Nexus 110040 — файл «Nearest Quest Tracker
+2.2.0» (fileId 416782, update 2.1.0, старый в архиве, Primary) и новый «Nearest Quest Tracker AE 2.2.0» (fileId 416783,
+Main, не Primary), описания файлов через перехват `edit-file`, версия мода 2.2.0, changelog 2.2.0 (из формы загрузки
+сохранился), Full description = `release/nexus-description.bbcode.txt` (12464 симв., сверено по хэшам строк).
+Дальше: версия для NG (стенд NG — когда докачается; база NG 1.10.984 уже в `_researchddress-library-aio`).
 
 ## AE-4: квесты Creation Club (2026-10-18, сделано)
 
