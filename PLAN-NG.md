@@ -1,7 +1,7 @@
 # Nearest Quest Tracker — версия для NG (Next-Gen, 1.10.984)
 
-Статус (2026-10-18): **NG-0..NG-3 сделаны** — DLL OG/NG собрана (83f7fa4), стенд NG готов, **в игре работает**
-(Debug-DLL, пользователь 2026-10-18); дальше NG-4 релиз. Решение: одна DLL на OG и NG (alandtse/CommonLibF4 выбирает ID по версии игры), AE — своя.
+Статус (2026-10-18): **NG-0..NG-4 сделаны — 2.3.0 выпущен** (GitHub v2.3.0 + Nexus: основной файл = OG + NG, AE-файл).
+Дальше — ответ alandtse на PR #52 (если примут — вернуть подмодуль на upstream). Решение: одна DLL на OG и NG (alandtse/CommonLibF4 выбирает ID по версии игры), AE — своя.
 
 ## NG-1: ID движка (сделано, проверено по файлам)
 
@@ -96,7 +96,13 @@ cc-плагин ⇒ пропуск («creation club stub»). Касается и
 **PR в alandtse:** https://github.com/alandtse/CommonLibF4/pull/52 (ветка форка `ng-ids-bsscript-refr` = upstream
 master + тот же патч). Если примут — вернуть подмодуль на upstream.
 
-## NG-4: релиз
+## NG-4: релиз 2.3.0 (2026-10-18, ВЫПУЩЕН)
 
-Одна DLL на OG и NG ⇒ основной файл Nexus («Nearest Quest Tracker») теперь для OG + NG; AE — отдельный файл.
-README / описание Nexus: строка версий игры. Решения пользователя: номер версии, PR в alandtse.
+Решения пользователя: версия 2.3.0, перед публикацией быстрый тест Release; PR в alandtse — отправить.
+Release-DLL проверены пользователем в игре: OG основная игра (19:11), NG (19:15: F1 больше не берёт «Ячейку быстрого
+тестирования», локаций 222 вместо 227), AE (19:18: 230 локаций — интерьеры CC на месте). В архивах — ровно эти DLL (md5).
+- GitHub: 9b893a8 + тег v2.3.0, описание репозитория (1.10.163, Next-Gen 1.10.984, AE 1.11.x), README en/ru.
+- Nexus 110040: «Nearest Quest Tracker 2.3.0» (fileId 416814, update 416782, старый в архиве, Primary, описание файла
+  через перехват `edit-file`: 1.10.163 (F4SE 0.6.23) и Next-Gen 1.10.984 (F4SE 0.7.2)); «Nearest Quest Tracker AE
+  2.3.0» (fileId 416816, update 416783, описание прежнее); версия мода 2.3.0; changelog 2.3.0 (3 строки, сохранился
+  из формы); Full description = `release/nexus-description.bbcode.txt` (12480 симв., FNV a9d61549 совпал).
