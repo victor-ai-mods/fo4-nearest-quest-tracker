@@ -13,8 +13,8 @@ DLL загрузилась через MO2 (usvfs: путь к Address Library н
 и ~50 cc-плагинов с FULL = строковый ID Fallout4.esm 0003613F; последний — `ccVLTFO4001-Homes.esm` (последний в
 `Fallout4.ccc`), а в его `ccVLTFO4001-Homes_en.STRINGS` такого ID нет (в `Fallout4_en.STRINGS` и `DLCCoast_en.STRINGS`
 есть). Баг игры; в NQT — `WorldName()` в `Window.cpp`: при «LOOKUP FAILED!» для 0x3C — «Commonwealth»/«Содружество»,
-иначе editor ID (bb899ec, разложено на стенд, проверка — ждёт). Скрипты проверки (WRLD-переопределения, поиск ID в
-STRINGS внутри BA2 v8) были в `%TEMP%\nqt_wrld`.
+иначе editor ID (bb899ec, разложено на стенд, проверка — ждёт). Скрипты проверки: `tools/ae_wrld_overrides.py <Data>` (кто переопределяет WRLD 0x3C и его FULL),
+`tools/ae_strings_lookup.py <ba2> <конец имени .STRINGS> <hex id>` (есть ли строка в таблице внутри BA2 v1/v7/v8).
 Не проверено: Pip-Boy-текст цели старта, вкладка «Локации» действиями, предмет в избранном.
 
 ## AE-1/AE-2: сделано (2026-10-18)
