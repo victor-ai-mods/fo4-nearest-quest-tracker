@@ -25,7 +25,8 @@ MCM:
 
 - **Квесты из Pip-Boy**, в том числе пункты «Разного»; по желанию — и квесты без маркера.
 - **Новые квесты** — места, где начинаются ещё не начатые квесты: квестодатель, записка, радиопередатчик. 98 точек
-  старта для основной игры, Фар-Харбора и Ядер-Мира. Режим «Без спойлеров» не пишет название квеста у маркера.
+  старта для основной игры, Фар-Харбора и Ядер-Мира и 51 — для квестов Creation Club (Anniversary Edition). Режим
+  «Без спойлеров» не пишет название квеста у маркера.
 - **Квестодатели радиантных квестов** — Престон Гарви, проктор Квинлан, капитан Келс, ПАМ, доктор Каррингтон,
   учёные Института и другие (33 повторяемых квеста), но только пока у квестодателя действительно есть для вас
   задание: условия его реплики-предложения проверяет сам движок игры.
@@ -91,8 +92,11 @@ MCM:
 ## Как работает
 
 Папирус не умеет перечислять квесты Pip-Boy и позиции их целей, поэтому основную работу делает
-F4SE-плагин `NearestQuestTracker.dll` (исходники в `f4se_plugin/`, CommonLibF4). Сведения о движке — из
-дизассемблирования `Fallout4.exe` 1.10.163 с его PDB; подробности в `PLAN-1.0.md` и `PLAN.md` («Решения и находки»).
+F4SE-плагин `NearestQuestTracker.dll` (исходники в `f4se_plugin/`). Один исходник, две сборки: 1.10.163 — на
+[alandtse/CommonLibF4](https://github.com/alandtse/CommonLibF4), Anniversary Edition 1.11.x — на
+[libxse/commonlibf4](https://github.com/libxse/commonlibf4) (`NQT_AE`). Сведения о движке — из дизассемблирования
+`Fallout4.exe` 1.10.163 с его PDB и 1.11.191 без него; подробности в `PLAN-1.0.md`, `PLAN.md` («Решения и находки») и
+`PLAN-AE.md`.
 
 - **Расстояние.** Для каждой показанной цели квеста движок хранит путь от игрока
   (`PlayerCharacter::questTargets`, `TeleportPath` через двери) и перестраивает его раз в несколько секунд —
@@ -115,7 +119,8 @@ F4SE-плагин `NearestQuestTracker.dll` (исходники в `f4se_plugin/
   проверяются через `TESConditionItem::IsTrue` — субъект квестодатель, цель игрок, квест реплики в области
   видимости — пока этот квест идёт.
 - **Категории.** `QuestCategories.json` собирает `tools/gen_quest_categories.py` из таблиц квестов Fallout Wiki;
-  квесты, которых на вики нет, попадают в «Другие квесты», по подкатегории на плагин.
+  квесты, которых на вики нет, попадают в «Другие квесты», по подкатегории на плагин. Квесты Creation Club
+  («Дополнения / Creation Club») берутся из самих плагинов Creation Club, названия — из их таблиц строк.
 - **Локации** — маркеры карты всех миров (их флаги «видна» / «можно перемещаться»); **интерьеры** — по туману
   войны локальной карты Pip-Boy (`ExtraSeenData` ячейки, хранится в сохранении): ничего не открыто — значит, не были.
 - **Окно** — своё меню Scaleform (`menu/NQTMenu.as`, в SWF его компилирует JPEXS FFDec), регистрируется через
@@ -130,18 +135,17 @@ F4SE-плагин `NearestQuestTracker.dll` (исходники в `f4se_plugin/
 
 ## Требования
 
-- Fallout 4 **1.10.163** (до Next-Gen). Next-Gen и Anniversary Edition пока не поддерживаются: DLL
-  опирается на раскладку структур движка, проверенную только на 1.10.163, и на других версиях ничего не делает.
-  Версия для AE планируется (`PLAN-AE.md`), срок не обещаю.
-- [F4SE](https://f4se.silverlock.org/) 0.6.23.
-- [Address Library for F4SE Plugins](https://www.nexusmods.com/fallout4/mods/47327).
+- Fallout 4 **1.10.163** (до Next-Gen) с [F4SE](https://f4se.silverlock.org/) 0.6.23 — основной файл, или
+  Fallout 4 **Anniversary Edition 1.11.x** (1.11.137 — 1.11.240) со сборкой F4SE для вашей версии игры — файл AE.
+  Next-Gen 1.10.984 пока не поддерживается.
+- [Address Library for F4SE Plugins](https://www.nexusmods.com/fallout4/mods/47327) для вашей версии игры.
 - [Mod Configuration Menu](https://www.nexusmods.com/fallout4/mods/21497) — хоткеи и настройки.
 
 Плагин `NearestQuestTracker.esp` с флагом ESL, единственный мастер — `Fallout4.esm`. Ванильные записи не меняет.
 
 ## Сборка
 
-Клонировать с подмодулем (`git clone --recursive`). Нужны Visual Studio 2026 (18) с её CMake и vcpkg,
+Клонировать с подмодулями (`git clone --recursive`). Нужны Visual Studio 2026 (18) с её CMake и vcpkg,
 Python 3 с Pillow, компилятор Papyrus из Creation Kit в папке игры, JPEXS FFDec и Java (для SWF окна; `FFDEC_JAR`,
 по умолчанию `..\_tools\ffdec_26.3.0\ffdec-cli.jar`), исходники Papyrus из F4SE 0.6.23 (`F4SE_SCRIPTS`, по умолчанию
 `..\_tools\f4se_0_06_23\Scripts\Source`).
@@ -149,8 +153,13 @@ Python 3 с Pillow, компилятор Papyrus из Creation Kit в папке
 ```
 python tools/build.py --release     # DLL, NearestQuestTracker.esp, файлы MCM, SWF окна, скрипты Papyrus
 python tools/deploy.py --dll release
-python tools/package.py 2.0.0       # release\NearestQuestTracker-2.0.0.zip
+python tools/package.py 2.2.0       # release\NearestQuestTracker-2.2.0.zip
+python tools/build.py --release --ae         # то же с AE-DLL (f4se_plugin\build\ae)
+python tools/package.py 2.2.0 --ae           # release\NearestQuestTracker-AE-2.2.0.zip
 ```
+
+Стартам квестов и категориям Creation Club нужен AE-индекс: `python tools/esm_index.py --ae` (читает мастера и
+плагины из `Fallout4.ccc` установки AE, `D:\Games\F4_AE`).
 
 `build.py` и `deploy.py` берут путь к игре из `FO4_PATH` (по умолчанию `D:\Games\Fallout 4`).
 
