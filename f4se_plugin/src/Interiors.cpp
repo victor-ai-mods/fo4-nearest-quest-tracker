@@ -47,6 +47,28 @@ namespace NQT
 			return editorID && editorID[0] == 'z';
 		}
 
+		// Creation Club interiors that Fallout4.esm itself carries as stubs, with enabled unlocked world doors into them
+		// (2026-10-18, NG: door 0024A1B1 in Goodneighbor -> ccTOSFO4002Interior01 "Quick Test Cell", the Neon Flats
+		// entrance; also Shroud Manor ccZSEFO4002Interior01 and three Vault-Tec homes ccxxxFO4VLTInterior01). Their CC
+		// plugins (cctosfo4002_neonflats.esm, cczsefo4002-smanor.esm, ccvltfo4001-homes.esm) override the cell, so a cc*
+		// cell is real only when one of its files is a cc plugin. TESForm::GetFile clamps the index, hence the array.
+		bool IsCreationClubStub(const RE::TESObjectCELL& a_cell)
+		{
+			const auto editorID = a_cell.GetFormEditorID();
+			if (!editorID || _strnicmp(editorID, "cc", 2) != 0) {
+				return false;
+			}
+			if (const auto files = a_cell.sourceFiles.array) {
+				for (const auto file : *files) {
+					const auto name = file ? file->GetFilename() : ""sv;
+					if (name.size() >= 2 && _strnicmp(name.data(), "cc", 2) == 0) {
+						return false;
+					}
+				}
+			}
+			return true;
+		}
+
 		// ExtraDataList::GetSeenData (OG rva 94600): extra type 5, pointer at +0x18.
 		const IntSeenData* GetSeenData(const RE::TESObjectCELL& a_cell)
 		{
@@ -96,6 +118,9 @@ namespace NQT
 			}
 			if (a_interior.GetFormID() == kTestCell) {
 				return "test cell"sv;
+			}
+			if (IsCreationClubStub(a_interior)) {
+				return "creation club stub"sv;
 			}
 			if (IsAbandonedCell(a_interior)) {
 				return "abandoned cell"sv;
