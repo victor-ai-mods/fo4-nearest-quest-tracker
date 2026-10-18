@@ -113,8 +113,9 @@ class Indexer:
             if sig in (b'REFR', b'ACHR', b'QUST', b'INFO', b'DIAL', b'CELL', b'WRLD') or sig in WANT_BASE:
                 if flags & COMPRESSED:
                     body = zlib.decompress(body[4:])
-                # REFR: persistent ones, and placed books/notes (a quest can start from reading one).
-                if sig == b'REFR' and not flags & 0x400:
+                # REFR: persistent ones, and placed books/notes (a quest can start from reading one); in Creation
+                # Club plugins all of them (their quests start from holotapes, terminals, containers - and few refs).
+                if sig == b'REFR' and not flags & 0x400 and not self.name.lower().startswith('cc'):
                     name = next((p for t, p in subrecords(body) if t == b'NAME'), None)
                     if not name or self.bases.get(self.key(u32(name)), {}).get('sig') != 'BOOK':
                         continue
@@ -216,6 +217,8 @@ class Indexer:
                 q['objectives'].append(cur_obj)
             elif t == b'QSTA' and cur_obj is not None:
                 cur_obj['targets'].append(struct.unpack_from('<i', p)[0])
+            elif t == b'NNAM' and cur_obj is not None and len(p) == 4:
+                cur_obj['text'] = u32(p)   # string id (localized plugins)
             elif t in (b'ALST', b'ALLS', b'ALCS'):
                 cur_obj = None
                 cur_alias = {'kind': t.decode(), 'id': u32(p)}

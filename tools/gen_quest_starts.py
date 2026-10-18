@@ -15,6 +15,9 @@
            внутри цепочки); для NPC снаружи поле не пишется — берётся anchor.
 
 python tools/gen_quest_starts.py [--index <pickle>]
+
+Индекс по умолчанию — AE (esm_index_ae.pickle: мастера AE + cc-плагины, python tools/esm_index.py --ae), он нужен для
+строк Creation Club; ванильные строки из него получаются те же, что из OG-индекса (сверено 2026-10-18).
 """
 
 import argparse
@@ -29,7 +32,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 SRC = os.path.join(HERE, 'quest_starts.txt')
 OUT_DIR = os.path.join(ROOT, 'mod', 'F4SE', 'Plugins', 'NearestQuestTracker')
-DEFAULT_INDEX = os.path.join(ROOT, '..', '_research', 'nqt-quests', 'esm_index.pickle')
+DEFAULT_INDEX = os.path.join(ROOT, '..', '_research', 'nqt-quests', 'esm_index_ae.pickle')
 
 ROOT_WORLDS = {'Fallout4.esm|00003C', 'DLCCoast.esm|000B0F', 'DLCNukaWorld.esm|00290F'}
 MAP_MARKER = 'Fallout4.esm|000010'

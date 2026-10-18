@@ -206,3 +206,62 @@ InstR02                        Fallout4.esm|061C32  radiant  info=0EB2A4,0EB2A5,
 InstR03NEW                     Fallout4.esm|061C35  radiant  info=0ED64B,0ED64C  closed=institute  inside  # EvanWatson
 InstR04                        Fallout4.esm|061C2F  radiant  info=0F00F6,14EACE  closed=institute  inside  # AlanaSecord
 InstR05                        Fallout4.esm|061C37  radiant  info=0F0DCA,0F1491  closed=institute  inside  # JustinAyo
+
+# --- Creation Club (AE 1.11.x; на OG строки пропускаются: квеста нет). Отбор 2026-10-18: tools/cc_starts_research.py
+# (_research\nqt-quests\cc\cc_starts_report.txt) + en-вики. Ref — то, на что указывает первая цель квеста с маркером
+# (записка/голодиск/терминал/контейнер/NPC); почти все запускает скрипт CreationClub:StartAfterCharGenScript после
+# выхода из Убежища 111, но в перенесённых сохранениях они работают без стадий и без целей в Pip-Boy.
+# Не включены продолжения (их выдаёт предыдущий квест): Enclave Radio, три лагеря Анклава (Encampment0xMiscObj),
+# Dead On Delivery, Combat Ready, Lily's Grave, Silver like the Shroud, GunnerKillCount, OptionalVoiceQuest,
+# мастерские брамина / рад-оленя / киберпса; без места: The Endless War (рейды на поселения).
+ccBGSFO4044_HellfireBossKillQuest  ccBGSFO4044-HellfirePowerArmor.esl|00086A         # Pyromaniac — Pyro, юго-восточнее Listening Post Bravo
+ccBGSFO4046_BestOfThree            ccBGSFO4046-TesCan.esl|000009                     # Best of Three — первый стрелок Убежища 95 (координаты сигнала Волт-Тек)
+ccBGSFO4115_DM_Quest               ccBGSFO4115-X02.esl|000823                        # Speak of the Devil — записка Конни, Wattz Consumer Electronics
+ccBGSFO4116_Quest                  ccBGSFO4116-HeavyFlamer.esl|000FC6                # Crucible — пульт потока металла, Saugus Ironworks
+ccFSVFO4007_Quest                  ccFSVFO4007-Halloween.esl|000058                  # All Hallows' Eve — дверь Harbormaster Hotel (таинственный сигнал)
+ccOTMFO4001_Quest                  ccOTMFO4001-Remnants.esl|000052                   # Echoes of the Past — место засады на пропавший караван
+ccSBJFO4003_Quest                  ccSBJFO4003-Grenade.esl|000135                    # When Pigs Fly — терминал, Suggs' garage
+ccACXFO4001_Quest                  Fallout4.esm|08F0C1                               # Build a Suit — сундук в офисе Волт-Тек (тайник комбинезонов)
+ccAWNFO4002_Quest                  ccawnfo4002-factionclothing.esl|00000C            # Dead Drop — «Agent Instructions» у Revere Beach station
+ccBGSFO4018_StartupQuest           ccbgsfo4018-gaussrifleprototype.esl|000856        # The Prototype — главарь стрелков, Gunners plaza
+ccBGSFO4019_StartupQuest           ccbgsfo4019-chinesestealtharmor.esl|00080B        # Can You See Me Now? — сундук, South Boston military checkpoint
+ccBGSFO4035_PintSizedSlasherQuest  ccbgsfo4035-pint.esl|00081E                       # A Pint-Sized Problem — терминал Ларри, Boston Bugle
+ccBGSFO4038_HorseArmorFetchQuest   ccbgsfo4038-horsearmor.esl|000866                 # Giddyup! — броня-лошадь, Wilson Atomatoys corporate HQ
+ccBGSFO4042_BFGQuest               ccbgsfo4042-bfg.esl|00081D                        # From Hell — Mercy, Red Rocket в Светящемся море
+BGSFO4047_DeathmatchQuest          ccbgsfo4047-qthund.esl|00089A                     # Deathmatch — кембриджская воронка
+ccBGSFO4048_DovahQuest             ccbgsfo4048-dovah.esl|000FCC                      # Method to the Madness — голодиск режиссёра, Hubris Comics
+ccBGSFO4049_Quest                  ccbgsfo4049-brahminarmor.esl|000ACA               # Udder Madness — Cowbell (главарь рейдеров), Easy City Downs
+ccBGSFO4050DogAcquireQuest         ccbgsfo4050-dgbcoll.esl|000809                    # Dog Rescue — бордер-колли
+ccBGSFO4051DogAcquireQuest         ccbgsfo4051-dgbox.esl|000809                      # Dog Rescue — боксёр
+ccBGSFO4052DogAcquireQuest         ccbgsfo4052-dgdal.esl|000809                      # Dog Rescue — далматинец
+ccBGSFO4053DogAcquireQuest         ccbgsfo4053-dggoldr.esl|000809                    # Dog Rescue — золотистый ретривер
+ccBGSFO4054DogAcquireQuest         ccbgsfo4054-dggreatd.esl|000809                   # Dog Rescue — немецкий дог
+ccBGSFO4055DogAcquireQuest         ccbgsfo4055-dghusk.esl|000809                     # Dog Rescue — хаски
+ccBGSFO4056DogAcquireQuest         ccbgsfo4056-dglabb.esl|000809                     # Dog Rescue — чёрный лабрадор
+ccBGSFO4057DogAcquireQuest         ccbgsfo4057-dglaby.esl|000809                     # Dog Rescue — палевый лабрадор
+ccBGSFO4058DogAcquireQuest         ccbgsfo4058-dglabc.esl|000809                     # Dog Rescue — шоколадный лабрадор
+ccBGSFO4059DogAcquireQuest         ccbgsfo4059-dgpit.esl|000809                      # Dog Rescue — питбуль
+ccBGSFO4060DogAcquireQuest         ccbgsfo4060-dgrot.esl|000809                      # Dog Rescue — ротвейлер
+ccBGSFO4061DogAcquireQuest         ccbgsfo4061-dgshiinu.esl|000809                   # Dog Rescue — сиба-ину
+ccBGSFO4117_Quest                  ccbgsfo4117-capmerc.esl|0000ED                    # The Good Fight — Sparrow, Lynn Pier parking
+ccBGSFO4119_Quest                  ccbgsfo4119-cyberdog.esl|000009                   # All Byte — журналы Каришмы, Nahant Oceanological Society
+ccEEJFO4002_MainQuest              Fallout4.esm|24A181                               # Carbonated Concerns — дверь Nu Cafe Ola
+ccFRSFO4002_pm_quest               ccfrsfo4002-antimaterielrifle.esl|00089D          # The Paper Mirror — записка в Museum of Witchcraft
+ccFRSFO4003_WBH_Quest              ccfrsfo4003-cr75l.esl|000845                      # Way Back Home — Mary Jane, лес к востоку от Сэнкчуари
+ccFSVFO4003_SlocumsUnlockQuest     ccfsvfo4003-slocum.esl|0008BF                     # Slocum's Joe — ящик доставки, Slocum's Joe Corporate HQ
+ccGCAFO4024_Quest                  ccgcafo4024-instituteplasmaweapons.esl|000971     # Alms for the Needy — Eyeball (жетон), Parkview Lounge
+ccGCAFO4025_Quest                  ccgcafo4025-pagunmm.esl|000001                    # War Paint — записка Нуньеса, церковь к западу от Hyde Park
+ccJVDFO4001_HolidaySpiritQuest     ccjvdfo4001-holiday.esl|0009C0                    # Holiday Spirits — объявление в Даймонд-сити
+ccQDRFO4001_OutcastQuest           ccqdrfo4001_powerarmorai.esl|000840               # Malevolent Malfunction — излучатель сигнала бедствия изгоев
+ccRPSFO4001_ScavengerQuestTwo      ccrpsfo4001-scavenger.esl|0000FC                  # Lost at Sea — письмо «Sea Scavengers» у Oberland station
+ccRZRFO4001_MainQuest              ccrzrfo4001-tunnelsnakes.esm|00087F               # Tunnel Snakes Rule! — радиостанция в туннелях у Fens Way station
+ccRZRFO4002_OTM_Quest              ccrzrfo4002-disintegrate.esl|000878               # Over the Moon — фермер у моста юго-западнее ArcJet Systems
+ccSBJFO4001_SF_Quest               ccsbjfo4001-solarflare.esl|0008D7                 # Burned on the River — Jack (труп в трейлере), South Boston checkpoint
+ccSBJFO4002_Quest                  ccsbjfo4002_manwellrifle.esl|000868               # The Quantum Stag — записка охотника западнее Outpost Zimonja
+ccSBJFO4004_Quest                  ccsbjfo4004-ion.esl|000F9C                        # Workplace Safety — записка бывалого жителя пустошей
+ccSWKFO4001_CaptainCosmosQuest     ccswkfo4001-astronautpowerarmor.esm|0018E1        # Captain Cosmos — ящик Hubris за Super Duper Mart
+ccTOSFO4001_EarlyRetirementQuest   cctosfo4001-neosky.esm|000C1E                     # Early Retirement — терминал юридической конторы кампуса
+ccTOSFO4002_Quest                  cctosfo4002_neonflats.esm|001778                  # Neon Winter — терминал в вестибюле, Добрососедство
+ccVLTFO4001_Quest                  ccvltfo4001-homes.esm|00359B                      # A Home for the Family — записка «Family Matters», Boston Bugle
+ccZSEFO4001_PlayerHomeQuest        Fallout4.esm|24A182                               # A Place to Call Home — дверь квартиры в Чарлстауне
+ccZSEFO4002_Quest                  cczsefo4002-smanor.esm|001136                     # Shrouded Manor — терминал полицейского участка №8
