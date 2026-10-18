@@ -43,11 +43,18 @@ extern "C" DLLEXPORT constinit auto F4SEPlugin_Version = []() noexcept {
 	data.UsesSigScanning(false);
 	data.IsLayoutDependent(true);
 	data.HasNoStructUse(false);
+#ifdef NQT_AE
+	// With the 1.11.137 address library + layout flags F4SE does not check the list: any 1.11.x loads it.
+	data.CompatibleVersions({ F4SE::RUNTIME_LATEST });
+#else
 	data.CompatibleVersions({ F4SE::RUNTIME_1_10_984 });
+#endif
 	return data;
 }();
 
-// Old-gen F4SE (0.6.x, game 1.10.163) calls Query; next-gen F4SE reads F4SEPlugin_Version.
+#ifndef NQT_AE
+// Old-gen F4SE (0.6.x, game 1.10.163) calls Query; next-gen F4SE reads F4SEPlugin_Version. The AE DLL has no
+// Query, so old-gen F4SE does not load it.
 extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Query(const F4SE::QueryInterface* a_f4se, F4SE::PluginInfo* a_info)
 {
 	a_info->infoVersion = F4SE::PluginInfo::kVersion;
@@ -59,17 +66,20 @@ extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Query(const F4SE::QueryInterface* a
 	}
 	return a_f4se->RuntimeVersion() == F4SE::RUNTIME_1_10_163;
 }
+#endif
 
 extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Load(const F4SE::LoadInterface* a_f4se)
 {
 	F4SE::Init(a_f4se);
 	logger::info("game runtime {}, F4SE {}"sv, a_f4se->RuntimeVersion().string(), a_f4se->F4SEVersion().string());
 
+#ifndef NQT_AE
 	// Quest-target layouts (EngineTypes.h) are verified on 1.10.163 only; NG is stage 3c.
 	if (REL::Module::IsNG()) {
 		logger::warn("next-gen runtime is not supported yet; native functions not registered"sv);
 		return true;
 	}
+#endif
 
 	if (const auto messaging = F4SE::GetMessagingInterface()) {
 		messaging->RegisterListener(OnF4SEMessage);

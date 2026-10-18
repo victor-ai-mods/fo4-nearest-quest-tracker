@@ -87,7 +87,11 @@ namespace NQT::Window
 			RE::ObjectRefHandle handle;
 			{
 				RE::BSAutoReadLock lock{ quest->aliasAccessLock };
+#ifdef NQT_AE
+				handle = quest->GetAliasedRef(kMarkerAlias);
+#else
 				quest->GetAliasedRef(&handle, kMarkerAlias);
+#endif
 			}
 			const auto ref = handle.get();
 			return ref ? ref->GetFormID() : 0;

@@ -18,6 +18,12 @@ namespace NQT
 		constexpr std::uint32_t kCanTravelTo = 1u << 1;
 		constexpr std::uint32_t kHidden = 1u << 2;
 
+		// Read raw: libxse/commonlibf4 (AE) declares the members private.
+		std::uint8_t MarkerFlags(const RE::MapMarkerData& a_data) noexcept
+		{
+			return *(reinterpret_cast<const std::uint8_t*>(&a_data) + 0x10);
+		}
+
 		// MapMarkerData::GetMarkerType (OG rva DEAD0): u16 at +0x12, after the flag byte and the loaded copy of it.
 		std::uint16_t MarkerType(const RE::MapMarkerData& a_data) noexcept
 		{
@@ -32,9 +38,10 @@ namespace NQT
 
 		MarkerState StateOf(const RE::MapMarkerData& a_data) noexcept
 		{
-			return (a_data.flags & kCanTravelTo) && (a_data.flags & kVisible) ? MarkerState::kVisited :
-			       (a_data.flags & kVisible)                                  ? MarkerState::kSeen :
-			                                                                    MarkerState::kUnknown;
+			const auto flags = MarkerFlags(a_data);
+			return (flags & kCanTravelTo) && (flags & kVisible) ? MarkerState::kVisited :
+			       (flags & kVisible)                           ? MarkerState::kSeen :
+			                                                      MarkerState::kUnknown;
 		}
 
 		std::string_view StateName(MarkerState a_state) noexcept
@@ -233,7 +240,7 @@ namespace NQT
 				const auto it = locations.find(ref.get());
 				marker.location = it != locations.end() ? it->second : nullptr;
 				marker.state = StateOf(*data);
-				marker.hidden = (data->flags & kHidden) != 0;
+				marker.hidden = (MarkerFlags(*data) & kHidden) != 0;
 				marker.disabled = ref->IsDisabled();
 				marker.type = MarkerType(*data);
 				result.push_back(marker);
@@ -347,7 +354,7 @@ namespace NQT
 			lines.emplace_back(distance.SortKey(),
 				std::format("{:08X} \"{}\" {}{}{} flags {:02X} type {} world {:08X} location {:08X} \"{}\"{} -> {} {:.0f}"sv,
 					marker.ref->GetFormID(), name ? name : "", StateName(marker.state), marker.hidden ? " hidden"sv : ""sv,
-					marker.disabled ? " disabled"sv : ""sv, data ? data->flags & 0xFF : 0u, marker.type,
+					marker.disabled ? " disabled"sv : ""sv, data ? MarkerFlags(*data) : 0u, marker.type,
 					marker.world ? marker.world->GetFormID() : 0u, marker.location ? marker.location->GetFormID() : 0u,
 					locationName ? locationName : "", IsSettlement(marker.location) ? " settlement"sv : ""sv,
 					KindName(distance.kind), distance.value));

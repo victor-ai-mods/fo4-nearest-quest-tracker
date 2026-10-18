@@ -7,12 +7,16 @@ namespace NQT
 {
 	namespace
 	{
-		// BSStringT<char>::Set (CommonLibF4 has no OG id for it).
+		// BSStringT<char>::Set (alandtse/CommonLibF4 has no OG id for it).
 		void SetString(RE::BSStringT<char>& a_string, const char* a_text)
 		{
+#ifdef NQT_AE
+			a_string.Set(a_text, 0);
+#else
 			using func_t = bool(RE::BSStringT<char>*, const char*, std::uint64_t);
 			static REL::Relocation<func_t*> func{ REL::RelocationID(407804, 2189084) };
 			func(&a_string, a_text, 0);
+#endif
 		}
 
 		// The same text path the Pip-Boy takes: PipboyQuestData::GenerateStandardQuest (quest
@@ -160,7 +164,18 @@ namespace NQT
 		const auto     collection = RE::INISettingCollection::GetSingleton();
 		RE::Setting*   setting = nullptr;
 		if (collection) {
+#ifdef NQT_AE
+			// No AE id for GetPtr yet: its own search, case-insensitive like its _stricmp.
+			for (const auto entry : collection->settings) {
+				const auto key = entry ? entry->GetKey() : ""sv;
+				if (key.size() == std::char_traits<char>::length(kKey) && _strnicmp(key.data(), kKey, key.size()) == 0) {
+					setting = entry;
+					break;
+				}
+			}
+#else
 			setting = REL::Module::IsNG() ? collection->GetSetting(kKey) : collection->GetPtr(kKey);
+#endif
 		}
 
 		std::string language;

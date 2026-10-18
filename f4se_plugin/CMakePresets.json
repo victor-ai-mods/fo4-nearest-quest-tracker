@@ -1,6 +1,10 @@
 {
   "version": 3,
-  "cmakeMinimumRequired": { "major": 3, "minor": 21, "patch": 0 },
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 21,
+    "patch": 0
+  },
   "configurePresets": [
     {
       "name": "base",
@@ -13,10 +17,38 @@
         "VCPKG_TARGET_TRIPLET": "x64-windows-static"
       }
     },
-    { "name": "vs", "inherits": "base" }
+    {
+      "name": "vs",
+      "inherits": "base"
+    },
+    {
+      "name": "ae",
+      "inherits": "base",
+      "cacheVariables": {
+        "NQT_AE": "ON"
+      }
+    }
   ],
   "buildPresets": [
-    { "name": "release", "configurePreset": "vs", "configuration": "Release" },
-    { "name": "debug", "configurePreset": "vs", "configuration": "Debug" }
+    {
+      "name": "release",
+      "configurePreset": "vs",
+      "configuration": "Release"
+    },
+    {
+      "name": "debug",
+      "configurePreset": "vs",
+      "configuration": "Debug"
+    },
+    {
+      "name": "ae-release",
+      "configurePreset": "ae",
+      "configuration": "Release"
+    },
+    {
+      "name": "ae-debug",
+      "configurePreset": "ae",
+      "configuration": "Debug"
+    }
   ]
 }

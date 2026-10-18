@@ -25,12 +25,13 @@ namespace NQT
 		if (!dataHandler) {
 			return 0;
 		}
-		const auto [file, full] = dataHandler->LookupLoadedFile(plugin);
-		if (!file) {
-			return 0;
+		if (const auto file = dataHandler->LookupLoadedModByName(plugin)) {
+			return (std::uint32_t{ file->GetCompileIndex() } << 24) | (raw & 0xFFFFFF);
 		}
-		return full ? (std::uint32_t{ file->compileIndex } << 24) | (raw & 0xFFFFFF) :
-		              0xFE000000 | (std::uint32_t{ file->smallFileCompileIndex } << 12) | (raw & 0xFFF);
+		if (const auto file = dataHandler->LookupLoadedLightModByName(plugin)) {
+			return 0xFE000000 | (std::uint32_t{ file->GetSmallFileCompileIndex() } << 12) | (raw & 0xFFF);
+		}
+		return 0;
 	}
 
 	namespace
