@@ -3,6 +3,30 @@
 Статус (2026-10-12): **не начат.** Версия 2.0.0 выходит только для 1.10.163 (до Next-Gen). В описании на Nexus:
 версия для AE планируется, срок не обещаем. Делать — отдельными сессиями, по этапам ниже.
 
+## Находки 2026-10-18 (NG и AE, проверено по файлам)
+
+- **ID у AE свои.** Address Library AE 1.11.191 (`version-1-11-191-0.bin`, 651 571 ID, диапазон 15..8717431) не содержит
+  ни NG-ID из alandtse (ParseString NG 2189084 там нет; на AE это 2206630), ни наших OG-ID. Значит, DLL на alandtse
+  на AE не заработает даже с правкой `main.cpp`: alandtse считает 1.11.x «NG» (`Module.cpp`: `_version[2] > 163`) и
+  ищет NG-ID.
+- **Библиотека для AE есть: libxse/commonlibf4, ветка `main`** (живая, коммиты сентябрь 2026). `RUNTIME_LATEST =
+  1.11.240`, версии 1.11.137/159/169/191/221/240. Все 1092 ненулевых ID из её `include/RE/IDs.h` находятся в
+  Address Library 1.11.191. Только AE: NG и OG она не поддерживает (ветка `frozen-1.10.63` — старая OG, 2023).
+  Сборка — xmake (не CMake), раскладка заголовков другая (`RE/P/PlayerCharacter.h`, ID в `RE/IDs.h`), REL — в
+  подмодуле `libxse/commonlib-shared`.
+- **Флаги F4SE для AE** (`F4SE/Interfaces.h` libxse): `kAddressIndependence_AddressLibrary_1_11_137` (1<<2) и
+  `kStructureIndependence_1_11_137Layout` (1<<2) — отдельные от NG (`..._1_10_980`). F4SE для AE в описании плагина
+  требует именно их (Buffout4 NG с флагом только NG на AE отключается — видели 2026-10-15). Раз есть отдельный флаг
+  раскладки 1.11.137, раскладки структур в AE менялись — сверять.
+- **NG в alandtse — неполный:** `REL::RelocationID(og, ng)` — 2938 мест, простой `REL::ID(og)` — 10 476 (на NG такой ID
+  ищется в NG-базе как есть = неверный адрес / отказ). Каждую функцию CommonLibF4, которую зовёт NQT, проверять на
+  NG-ID. Наши свои ID только OG: 395737, 78630, 1552479, 586385, 167267, 43452, 339469 (ParseString уже
+  `RelocationID(407804, 2189084)`).
+- NQT использует ~60 типов RE:: (больше всего TESQuest, TESObjectREFR, TESWorldSpace, PlayerCharacter, TESObjectCELL),
+  своих раскладок — `EngineTypes.h` (160 строк) + смещения в комментариях `Interiors.cpp` / `MapMarkers.cpp` /
+  `QuestStarts.cpp`. Вызовов Papyrus из C++ (DispatchStaticCall) нет — проблема OG/NG-обёртки не касается.
+- Стенда NG нет (нет ни exe 1.10.984, ни F4SE для NG); стенд AE есть (`D:\Games\MO2 Fallout 4 AE`, exe 1.11.191).
+
 ## Почему сейчас на AE не работает (проверено по коду 2026-10-12)
 
 - Вся работа — в `NearestQuestTracker.dll`, собранной на alandtse/CommonLibF4: он знает только 1.10.163 (OG) и
