@@ -4,6 +4,7 @@
     python tools/build.py              — Debug-DLL (для разработки: лог уровня debug)
     python tools/build.py --release    — Release-DLL (в пакет)
     python tools/build.py --all        — обе DLL
+    python tools/build.py --ae [...]   — то же для AE 1.11.x (f4se_plugin/build/ae)
 
 Затем `python tools/deploy.py` (или `--dll release`).
 """
@@ -36,11 +37,14 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--release', action='store_true')
     ap.add_argument('--all', action='store_true')
+    ap.add_argument('--ae', action='store_true', help='DLL для AE 1.11.x (libxse/commonlibf4, build/ae)')
     args = ap.parse_args()
     presets = ['debug', 'release'] if args.all else ['release' if args.release else 'debug']
+    if args.ae:
+        presets = ['ae-' + p for p in presets]
 
     plugin = os.path.join(ROOT, 'f4se_plugin')
-    run([CMAKE, '--preset', 'vs'], plugin)
+    run([CMAKE, '--preset', 'ae' if args.ae else 'vs'], plugin)
     for preset in presets:
         run([CMAKE, '--build', '--preset', preset], plugin)
     run([sys.executable, os.path.join(ROOT, 'tools', 'gen_esp.py')], ROOT)

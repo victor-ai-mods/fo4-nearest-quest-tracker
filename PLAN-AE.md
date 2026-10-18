@@ -1,7 +1,62 @@
 # Nearest Quest Tracker — план версии для AE (Anniversary Edition, 1.11.x)
 
-Статус (2026-10-12): **не начат.** Версия 2.0.0 выходит только для 1.10.163 (до Next-Gen). В описании на Nexus:
-версия для AE планируется, срок не обещаем. Делать — отдельными сессиями, по этапам ниже.
+Статус (2026-10-18): **AE-0, AE-1, AE-2 сделаны; AE-3 (тест в игре) — ждёт пользователя.** AE-DLL собрана
+(Debug) и разложена на стенд: MO2 `D:\Games\MO2 Fallout 4 AE`, профиль «Nearest Quest Tracker», мод «Nearest Quest
+Tracker (AE dev)». Подробности — раздел «AE-1/AE-2: сделано» ниже. NG — отдельно, когда будет стенд NG (пользователь
+качает игру NG).
+
+## AE-1/AE-2: сделано (2026-10-18)
+
+**Сборка.** Один исходник, две DLL: `cmake --preset vs` (OG+NG, alandtse) и `cmake --preset ae` (`NQT_AE=1`,
+libxse/commonlibf4 — подмодуль `f4se_plugin/extern/commonlibf4-ae`; её xmake не нужен: commonlib-shared собирается
+своим CMake, сама commonlibf4 — glob `src/**.cpp` в нашем `CMakeLists.txt`; spdlog из vcpkg с фичей `wchar`).
+`python tools/build.py --ae` / `python tools/deploy.py --ae` (в MO2-мод стенда, основную игру не трогает).
+Различия API — в `PCH.h` (логгер через `REX::Impl::Log`, `RE::Scaleform` = `::Scaleform`, `DIFFICULTY_LEVEL`) и
+точечные `#ifdef NQT_AE` (`GetAliasedRef` возвращает handle, `BSStringT::Set` есть в libxse, `sLanguage` — свой
+поиск без учёта регистра по `INISettingCollection::settings`). `MapMarkerData` в libxse с private-полями → флаги
+читаются сырым байтом +0x10 в обеих сборках. AE-DLL без `F4SEPlugin_Query` (старый F4SE её не загрузит); флаги
+`UsesAddressLibrary` + `IsLayoutDependent` = биты 1.11.137 → F4SE AE грузит её на любой 1.11.x без списка версий
+(проверено по исходнику ianpatt/f4se `PluginManager.cpp`, `CheckPluginCompatibility`).
+
+**Свои вызовы движка — AE-ID** (`NQT::GameID(og, ae)` в `PCH.h`), найдены дизассемблером AE 1.11.191:
+
+| Функция | OG id | AE id (rva) | Как найдена |
+|---|---|---|---|
+| PlayerCharacterQuestEvent::Notify | 395737 | 2232882 (D52320) | vtable PipboyQuestData → Populate → RegisterSink → QEventSource → её вызывающие |
+| TESQuest::GetAliasedLoc | 1552479 | 2207812 (671D60) | строка `LocAliasIsLocation >>` → функция условия |
+| TESFaction::GetPCAnEnemy | 586385 | 2207180 (6470C0) | таблица команд `GetPCEnemyofFaction` → функция условия |
+| TESReactionForm::GetFactionCombatRelation | 167267 | 2193377 (31EA80) | таблица команд `GetFactionCombatReaction` |
+| TESConditionItem::IsTrue(ConditionCheckParams&) | 43452 | 2212009 (769DA0) | libxse `IsTrue2` (IsTrue1 = обёртка (REFR,REFR)) |
+| Actor::CalculateFactionFightReaction | 339469 | 2230091 (C8DFF0) | общий вызывающий GetPCAnEnemy×2 + GetFactionCombatRelation, тот же порядок вызовов |
+| BGSLocAlias::IsLocAlias | 78630 | нет (встроена) | на AE — сравнение vtable с `VTABLE::BGSLocAlias` (RTTI проверен) |
+
+**Раскладки, проверенные по коду AE:** TeleportPath (ComputeLength AE 7A4F80: +0x10/+0x18/+0x28, двери по 0x18,
+start +0x30, end +0x3C, позиция двери +0xD0); PlayerCharacter::objectives +0x7D8 (PipboyQuestData::Populate);
+TESQuest: aliasAccessLock +0xD0, карта алиас→локация +0x90..+0xB0, questType +0xF7, флаги +0xF4 (бит 11 —
+GetActive), stages +0x100 / номер стадии +0x18 / «выполнена» бит 0 +0x1A (IsStageDone AE 66B3C0); TESFaction:
+флаги +0x58, +0xFC, TESReactionForm +0x30; IntSeenData (ctor AE C44440: биты +0x08..+0x27, x/y +0x28/+0x29, next
++0x30); ExtraSeenData (тип 5, данные +0x18), ExtraRadius (тип 0x59, float +0x18); MapMarkerData флаги +0x10 бит 0
+(натив `IsMapMarkerVisible`); слоты vtable TESObjectREFR 0x8C Get3D, 0xBE GetSaveParentCell, 0xC0 IsDead.
+По заголовкам: 390 полей, к которым NQT обращается по имени, в alandtse и libxse на тех же смещениях; размеры
+классов расходятся только у 13 (из используемых — `UI`, он идёт через функции libxse). Ни одна функция libxse с
+ID 0 (неизвестна на AE) в коде не вызывается. libxse описывает BGSQuestObjective / TESQuestTarget / REF_DATA /
+QuestTargetArray / BGSLocAlias (+0x28) так же, как наш `EngineTypes.h`.
+Не проверено кодом AE: MapMarkerData тип +0x12 (libxse говорит то же).
+
+**Инструмент:** `D:\Work\vs_projects\fallout4\tools\fo4_ae.py` — AE-аналог `fo4_pdb.py`: имена из libxse `IDs.h` /
+`IDs_VTABLE.h` через Address Library AE, границы функций из `.pdata` (с chained-кусками), `sym/dis/id/at/xref/calls/
+str/ptr/q`. Приёмы: vtable-ID в Address Library AE остались OG-шными (у 88 тыс. ID данные/vtable общие с OG);
+строки отладки функций условий (`<Имя> >> %0.2f`) и таблица команд (`ptr` на строку имени → +0x40 = функция
+условия) — надёжная привязка между версиями.
+
+**F4SE 0.7.7 (AE):** в `f4se_1_11_191.dll` и Scripts 0.7.7 есть всё, что зовут скрипты и окно (UI.RegisterCustomMenu,
+OpenMenu/CloseMenu/IsMenuOpen/IsMenuRegistered/Invoke, AllowTextInput, SendExternalEvent, RegisterForExternalEvent,
+Game.GetForm).
+
+**Стенд:** профиль «Nearest Quest Tracker» = копия «I Am Alive» (ini, Quicksave0 lvl 90 из основной игры — в нём уже
+есть данные NQT), мод I Am Alive выключен, `NearestQuestTracker.esp` в plugins.txt; в dev-мод положен
+`MCM/Settings/Keybinds.json` с клавишами пользователя (F1 отметить, F2 исключить, F3 авто, F4 текущий квест, F7 окно).
+Лог DLL — тот же `My Games\Fallout4\F4SE\NearestQuestTracker.log`, что у основной игры (перезапишется).
 
 ## Находки 2026-10-18 (NG и AE, проверено по файлам)
 

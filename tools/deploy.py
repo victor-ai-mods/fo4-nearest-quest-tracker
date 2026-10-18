@@ -4,6 +4,9 @@
   python tools/deploy.py                — NearestQuestTracker.esp, NQT_*.pex, Debug-DLL, MCM, переводы; включить
   python tools/deploy.py --dll release  — то же, но Release-DLL
   python tools/deploy.py --remove       — снять плагин и убрать его файлы
+  python tools/deploy.py --ae [--dll …] — на стенд AE: MO2-мод «Nearest Quest Tracker (AE dev)» в
+                                          D:\\Games\\MO2 Fallout 4 AE, плагин — в plugins.txt профиля
+                                          «Nearest Quest Tracker» (профиль и строку в modlist.txt — один раз руками)
 
 DLL заменяется только при закрытой игре (иначе файл занят).
 
@@ -29,6 +32,20 @@ PLUGIN_LISTS = [
     os.path.join(os.environ['LOCALAPPDATA'], 'Fallout4', 'Plugins.txt'),
     os.path.join(GAME, 'fallout4', 'Plugins.txt'),
 ]
+BUILD = 'vs'                                    # f4se_plugin/build/<BUILD>/<config>
+
+# Стенд AE 1.11.191: свой портативный MO2, мод = папка как Data, профиль со своими ini и сохранениями.
+AE_MO2 = r'D:\Games\MO2 Fallout 4 AE'
+AE_MOD_NAME = 'Nearest Quest Tracker (AE dev)'
+AE_PROFILE = os.path.join(AE_MO2, 'profiles', 'Nearest Quest Tracker')
+
+
+def use_ae():
+    global GAME, DATA, PLUGIN_LISTS, BUILD
+    GAME = AE_MO2
+    DATA = os.path.join(AE_MO2, 'mods', AE_MOD_NAME)
+    PLUGIN_LISTS = [os.path.join(AE_PROFILE, 'plugins.txt')]
+    BUILD = 'ae'
 
 
 def backup(path):
@@ -80,7 +97,7 @@ def script_paths():
 
 def dll_paths(config):
     """(собранная DLL, куда в игре); config — 'Debug' или 'Release'."""
-    return (os.path.join(ROOT, 'f4se_plugin', 'build', 'vs', config, DLL),
+    return (os.path.join(ROOT, 'f4se_plugin', 'build', BUILD, config, DLL),
             os.path.join(DATA, 'F4SE', 'Plugins', DLL))
 
 
@@ -113,7 +130,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--remove', action='store_true')
     ap.add_argument('--dll', choices=['debug', 'release'], default='debug')
+    ap.add_argument('--ae', action='store_true')
     args = ap.parse_args()
+    if args.ae:
+        use_ae()
     if args.remove:
         remove()
     else:
