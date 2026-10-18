@@ -216,21 +216,12 @@ namespace NQT::Window
 			SortByTrackOrder(candidates);
 
 			// A quest with several start points: its nearest one (the first in track order).
-			std::unordered_set<const RE::TESQuest*> listed;
-			std::size_t                             pickable = 0;
+			std::unordered_set<const RE::TESQuest*>             listed;
+			std::vector<std::pair<const Candidate*, std::string>> picked;
 			for (const auto& candidate : candidates) {
-				if (!candidate.quest || !listed.insert(candidate.quest).second) {
-					continue;
+				if (candidate.quest && listed.insert(candidate.quest).second) {
+					picked.emplace_back(&candidate, QuestName(*candidate.quest, !candidate.start));
 				}
-				const auto& quest = *candidate.quest;
-				const auto  kind = candidate.start ? Kind::kStart : candidate.noMarker ? Kind::kNoMarker : Kind::kQuest;
-				const bool  tracked = candidate.start ? shownStart != 0 && shownStart == candidate.markerID : IsActive(quest);
-				auto        row = builder.Row(kind, &quest, candidate.markerID, QuestName(quest, !candidate.start),
-					candidate.world, RowDistance(candidate), tracked, excluded.contains(&quest));
-				row.SetMember("state", GFxValue(std::to_underlying(candidate.start ? QuestState::kCanStart : QuestState::kPipboy)));
-				row.SetMember("category", builder.String(GetQuestCategory(quest)));
-				rows.PushBack(row);
-				++pickable;
 			}
 
 			// The rest of the known quests: not started (or running with nothing to show) first, then completed;
@@ -249,6 +240,57 @@ namespace NQT::Window
 				if (quest && listed.insert(quest).second) {
 					rest.push_back({ quest, IsQuestCompleted(*quest), GetQuestCategory(*quest), QuestName(*quest, false) });
 				}
+			}
+
+			// Quests sharing a name (the twelve Creation Club "Dog Rescue", one per breed) get their first objective
+			// added - only when that tells all of them apart (the eight Automatron "Rogue Robot" have the same one).
+			std::unordered_map<std::string, std::vector<const RE::TESQuest*>> byName;
+			for (const auto& [candidate, name] : picked) {
+				byName[name].push_back(candidate->quest);
+			}
+			for (const auto& entry : rest) {
+				byName[entry.name].push_back(entry.quest);
+			}
+			std::unordered_map<const RE::TESQuest*, std::string> objectiveSuffix;
+			for (const auto& [name, quests] : byName) {
+				if (quests.size() < 2) {
+					continue;
+				}
+				std::unordered_set<std::string> seen;
+				std::vector<std::string>        objectives;
+				for (const auto quest : quests) {
+					auto objective = GetObjectiveName(*quest, std::nullopt);
+					if (objective.empty() || objective == name || !seen.insert(objective).second) {
+						objectives.clear();
+						break;
+					}
+					objectives.push_back(std::move(objective));
+				}
+				for (std::size_t i = 0; i < objectives.size(); ++i) {
+					objectiveSuffix[quests[i]] = " – "s + objectives[i];  // en dash: in $MAIN_Font (an em dash may not be)
+				}
+			}
+			const auto distinct = [&](const RE::TESQuest& a_quest, std::string& a_name) {
+				if (const auto it = objectiveSuffix.find(&a_quest); it != objectiveSuffix.end()) {
+					a_name += it->second;
+				}
+			};
+
+			for (auto& [candidate, name] : picked) {
+				const auto& quest = *candidate->quest;
+				distinct(quest, name);
+				const auto kind = candidate->start ? Kind::kStart : candidate->noMarker ? Kind::kNoMarker : Kind::kQuest;
+				const bool tracked = candidate->start ? shownStart != 0 && shownStart == candidate->markerID : IsActive(quest);
+				auto       row = builder.Row(kind, &quest, candidate->markerID, name, candidate->world, RowDistance(*candidate),
+					tracked, excluded.contains(&quest));
+				row.SetMember("state", GFxValue(std::to_underlying(candidate->start ? QuestState::kCanStart : QuestState::kPipboy)));
+				row.SetMember("category", builder.String(GetQuestCategory(quest)));
+				rows.PushBack(row);
+			}
+			const auto pickable = picked.size();
+
+			for (auto& entry : rest) {
+				distinct(*entry.quest, entry.name);
 			}
 			std::ranges::sort(rest, std::less{}, [](const Rest& a_rest) {
 				return std::tie(a_rest.completed, a_rest.category, a_rest.name);
