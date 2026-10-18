@@ -70,6 +70,22 @@ namespace NQT::Window
 			return result;
 		}
 
+		// The name of a world for the window. AE 1.11.191 with Creation Club: ~50 cc plugins override the Commonwealth
+		// (Fallout4.esm WRLD 3C) with the FULL string id of Fallout4.esm, and the last one loaded (ccVLTFO4001-Homes.esm)
+		// has no such id in its own string table, so the engine names it "LOOKUP FAILED!" (2026-10-18).
+		std::string WorldName(const RE::TESWorldSpace& a_world, std::string_view a_language)
+		{
+			const std::string_view name = RE::TESFullName::GetFullName(a_world);
+			if (!name.empty() && !name.ends_with("LOOKUP FAILED!"sv)) {
+				return std::string{ name };
+			}
+			if (a_world.GetFormID() == 0x00003C) {
+				return a_language == "ru"sv ? "Содружество"s : "Commonwealth"s;
+			}
+			const auto editorID = a_world.GetFormEditorID();
+			return editorID && *editorID ? std::string{ editorID } : std::format("{:08X}"sv, a_world.GetFormID());
+		}
+
 		// TESQuest::GetActive (OG rva 5D6AA0): data flags bit 11, what Quest.IsActive / SetActive use.
 		bool IsActive(const RE::TESQuest& a_quest) noexcept
 		{
@@ -129,7 +145,8 @@ namespace NQT::Window
 		public:
 			explicit Builder(Movie& a_movie, const RE::TESWorldSpace* a_playerWorld) :
 				_movie(a_movie),
-				_playerWorld(a_playerWorld)
+				_playerWorld(a_playerWorld),
+				_language(GetGameLanguage())
 			{}
 
 			GFxValue Object()
@@ -161,8 +178,7 @@ namespace NQT::Window
 				row.SetMember("quest", GFxValue(static_cast<std::int32_t>(a_quest ? a_quest->GetFormID() : 0u)));
 				row.SetMember("ref", GFxValue(static_cast<std::int32_t>(a_refID)));
 				row.SetMember("name", String(a_name));
-				const auto worldName = a_world ? RE::TESFullName::GetFullName(*a_world) : ""sv;
-				row.SetMember("world", String(std::string{ worldName }));
+				row.SetMember("world", String(a_world ? WorldName(*a_world, _language) : std::string{}));
 				row.SetMember("worldRank", GFxValue(static_cast<std::int32_t>(WorldRank(a_world, _playerWorld))));
 				row.SetMember("dist", GFxValue(a_distance));
 				row.SetMember("tracked", GFxValue(a_tracked));
@@ -173,6 +189,7 @@ namespace NQT::Window
 		private:
 			Movie&                   _movie;
 			const RE::TESWorldSpace* _playerWorld;
+			std::string              _language;
 		};
 
 		using Clock = std::chrono::steady_clock;
