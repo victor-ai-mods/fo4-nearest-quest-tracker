@@ -92,11 +92,14 @@ Texts are in English or Russian, by the game's `sLanguage`.
 ## How it works
 
 Papyrus cannot list the Pip-Boy quests or the positions of their objectives, so the work is done by an
-F4SE plugin, `NearestQuestTracker.dll` (source in `f4se_plugin/`). One source, two builds: 1.10.163 on
-[alandtse/CommonLibF4](https://github.com/alandtse/CommonLibF4), Anniversary Edition 1.11.x on
+F4SE plugin, `NearestQuestTracker.dll` (source in `f4se_plugin/`). One source, two builds: one DLL for 1.10.163
+and Next-Gen 1.10.984 on [alandtse/CommonLibF4](https://github.com/alandtse/CommonLibF4) (the submodule is the
+[victor-ai-mods fork](https://github.com/victor-ai-mods/CommonLibF4/tree/nqt-ng-ids), branch `nqt-ng-ids`: Next-Gen
+ids for five functions that had 1.10.163 ids only, sent upstream as
+[alandtse/CommonLibF4#52](https://github.com/alandtse/CommonLibF4/pull/52)), Anniversary Edition 1.11.x on
 [libxse/commonlibf4](https://github.com/libxse/commonlibf4) (`NQT_AE`). Engine details come from disassembling
-`Fallout4.exe` 1.10.163 with its PDB and 1.11.191 without one; more in `PLAN-1.0.md`, `PLAN.md` ("Decisions and
-findings") and `PLAN-AE.md`.
+`Fallout4.exe` 1.10.163 with its PDB, 1.11.191 and 1.10.984 without one; more in `PLAN-1.0.md`, `PLAN.md`
+("Decisions and findings"), `PLAN-AE.md` and `PLAN-NG.md`.
 
 - **Distance.** For every displayed quest target the engine keeps a path from the player
   (`PlayerCharacter::questTargets`, a `TeleportPath` that goes through doors) and rebuilds it every few
@@ -136,9 +139,9 @@ other mods. The format is explained inside the example files.
 
 ## Requirements
 
-- Fallout 4 **1.10.163** (pre-Next-Gen) with [F4SE](https://f4se.silverlock.org/) 0.6.23 - the main file, or
-  Fallout 4 **Anniversary Edition 1.11.x** (1.11.137 - 1.11.240) with the F4SE build for your game version - the AE
-  file. Next-Gen 1.10.984 is not supported yet.
+- Fallout 4 **1.10.163** (pre-Next-Gen) with [F4SE](https://f4se.silverlock.org/) 0.6.23 or **Next-Gen 1.10.984**
+  with F4SE 0.7.2 - the main file, or Fallout 4 **Anniversary Edition 1.11.x** (1.11.137 - 1.11.240) with the F4SE
+  build for your game version - the AE file.
 - [Address Library for F4SE Plugins](https://www.nexusmods.com/fallout4/mods/47327) for your game version.
 - [Mod Configuration Menu](https://www.nexusmods.com/fallout4/mods/21497) - hotkeys and settings.
 
@@ -155,9 +158,9 @@ default `..\_tools\f4se_0_06_23\Scripts\Source`).
 ```
 python tools/build.py --release     # DLL, NearestQuestTracker.esp, MCM files, window SWF, Papyrus scripts
 python tools/deploy.py --dll release
-python tools/package.py 2.2.0       # release\NearestQuestTracker-2.2.0.zip
+python tools/package.py 2.3.0       # release\NearestQuestTracker-2.3.0.zip (1.10.163 + 1.10.984)
 python tools/build.py --release --ae         # the same with the AE DLL (f4se_plugin\build\ae)
-python tools/package.py 2.2.0 --ae           # release\NearestQuestTracker-AE-2.2.0.zip
+python tools/package.py 2.3.0 --ae           # release\NearestQuestTracker-AE-2.3.0.zip
 ```
 
 Quest starts and Creation Club categories need the AE index: `python tools/esm_index.py --ae` (reads the masters and

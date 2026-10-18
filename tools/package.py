@@ -1,7 +1,7 @@
 """
 Архив для Nexus: release/NearestQuestTracker/ (раскладка как в Data) и release/NearestQuestTracker-<версия>.zip.
 
-    python tools/package.py 1.0.0         — для 1.10.163 (OG): release/NearestQuestTracker-1.0.0.zip
+    python tools/package.py 1.0.0         — для 1.10.163 (OG) и 1.10.984 (NG): release/NearestQuestTracker-1.0.0.zip
     python tools/package.py 1.0.0 --ae    — для AE 1.11.x: release/NearestQuestTracker-AE-1.0.0.zip (AE-DLL из
                                             f4se_plugin/build/ae/Release, остальное то же)
 

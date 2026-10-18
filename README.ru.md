@@ -92,11 +92,14 @@ MCM:
 ## Как работает
 
 Папирус не умеет перечислять квесты Pip-Boy и позиции их целей, поэтому основную работу делает
-F4SE-плагин `NearestQuestTracker.dll` (исходники в `f4se_plugin/`). Один исходник, две сборки: 1.10.163 — на
-[alandtse/CommonLibF4](https://github.com/alandtse/CommonLibF4), Anniversary Edition 1.11.x — на
+F4SE-плагин `NearestQuestTracker.dll` (исходники в `f4se_plugin/`). Один исходник, две сборки: одна DLL для
+1.10.163 и Next-Gen 1.10.984 — на [alandtse/CommonLibF4](https://github.com/alandtse/CommonLibF4) (подмодуль —
+[форк victor-ai-mods](https://github.com/victor-ai-mods/CommonLibF4/tree/nqt-ng-ids), ветка `nqt-ng-ids`: ID для
+Next-Gen у пяти функций, где был только ID 1.10.163; отправлено в upstream —
+[alandtse/CommonLibF4#52](https://github.com/alandtse/CommonLibF4/pull/52)), Anniversary Edition 1.11.x — на
 [libxse/commonlibf4](https://github.com/libxse/commonlibf4) (`NQT_AE`). Сведения о движке — из дизассемблирования
-`Fallout4.exe` 1.10.163 с его PDB и 1.11.191 без него; подробности в `PLAN-1.0.md`, `PLAN.md` («Решения и находки») и
-`PLAN-AE.md`.
+`Fallout4.exe` 1.10.163 с его PDB, 1.11.191 и 1.10.984 без него; подробности в `PLAN-1.0.md`, `PLAN.md` («Решения и
+находки»), `PLAN-AE.md` и `PLAN-NG.md`.
 
 - **Расстояние.** Для каждой показанной цели квеста движок хранит путь от игрока
   (`PlayerCharacter::questTargets`, `TeleportPath` через двери) и перестраивает его раз в несколько секунд —
@@ -135,9 +138,9 @@ F4SE-плагин `NearestQuestTracker.dll` (исходники в `f4se_plugin/
 
 ## Требования
 
-- Fallout 4 **1.10.163** (до Next-Gen) с [F4SE](https://f4se.silverlock.org/) 0.6.23 — основной файл, или
-  Fallout 4 **Anniversary Edition 1.11.x** (1.11.137 — 1.11.240) со сборкой F4SE для вашей версии игры — файл AE.
-  Next-Gen 1.10.984 пока не поддерживается.
+- Fallout 4 **1.10.163** (до Next-Gen) с [F4SE](https://f4se.silverlock.org/) 0.6.23 или **Next-Gen 1.10.984** с
+  F4SE 0.7.2 — основной файл, или Fallout 4 **Anniversary Edition 1.11.x** (1.11.137 — 1.11.240) со сборкой F4SE для
+  вашей версии игры — файл AE.
 - [Address Library for F4SE Plugins](https://www.nexusmods.com/fallout4/mods/47327) для вашей версии игры.
 - [Mod Configuration Menu](https://www.nexusmods.com/fallout4/mods/21497) — хоткеи и настройки.
 
@@ -153,9 +156,9 @@ Python 3 с Pillow, компилятор Papyrus из Creation Kit в папке
 ```
 python tools/build.py --release     # DLL, NearestQuestTracker.esp, файлы MCM, SWF окна, скрипты Papyrus
 python tools/deploy.py --dll release
-python tools/package.py 2.2.0       # release\NearestQuestTracker-2.2.0.zip
+python tools/package.py 2.3.0       # release\NearestQuestTracker-2.3.0.zip (1.10.163 + 1.10.984)
 python tools/build.py --release --ae         # то же с AE-DLL (f4se_plugin\build\ae)
-python tools/package.py 2.2.0 --ae           # release\NearestQuestTracker-AE-2.2.0.zip
+python tools/package.py 2.3.0 --ae           # release\NearestQuestTracker-AE-2.3.0.zip
 ```
 
 Стартам квестов и категориям Creation Club нужен AE-индекс: `python tools/esm_index.py --ae` (читает мастера и
