@@ -1,6 +1,6 @@
 # Nearest Quest Tracker — план версии для AE (Anniversary Edition, 1.11.x)
 
-Статус (2026-10-18): **AE-0, AE-1, AE-2 сделаны; AE-3 (тест в игре) — ждёт пользователя.** AE-DLL собрана
+Статус (2026-10-18): **AE-0..AE-3 сделаны (AE-DLL работает в игре); дальше AE-4 — квесты Creation Club.** AE-DLL собрана
 (Debug) и разложена на стенд: MO2 `D:\Games\MO2 Fallout 4 AE`, профиль «Nearest Quest Tracker», мод «Nearest Quest
 Tracker (AE dev)». Подробности — раздел «AE-1/AE-2: сделано» ниже. NG — отдельно, когда будет стенд NG (пользователь
 качает игру NG).
@@ -13,9 +13,10 @@ DLL загрузилась через MO2 (usvfs: путь к Address Library н
 и ~50 cc-плагинов с FULL = строковый ID Fallout4.esm 0003613F; последний — `ccVLTFO4001-Homes.esm` (последний в
 `Fallout4.ccc`), а в его `ccVLTFO4001-Homes_en.STRINGS` такого ID нет (в `Fallout4_en.STRINGS` и `DLCCoast_en.STRINGS`
 есть). Баг игры; в NQT — `WorldName()` в `Window.cpp`: при «LOOKUP FAILED!» для 0x3C — «Commonwealth»/«Содружество»,
-иначе editor ID (bb899ec, разложено на стенд, проверка — ждёт). Скрипты проверки: `tools/ae_wrld_overrides.py <Data>` (кто переопределяет WRLD 0x3C и его FULL),
+иначе editor ID (bb899ec) — проверено в игре: «Commonwealth». Скрипты проверки: `tools/ae_wrld_overrides.py <Data>` (кто переопределяет WRLD 0x3C и его FULL),
 `tools/ae_strings_lookup.py <ba2> <конец имени .STRINGS> <hex id>` (есть ли строка в таблице внутри BA2 v1/v7/v8).
-Не проверено: Pip-Boy-текст цели старта, вкладка «Локации» действиями, предмет в избранном.
+Повторный запуск 2026-10-18: пользователь проверил всё — F1, F4, окно (обе вкладки, отметка кликом), Pip-Boy-текст
+цели старта, предмет в избранном. **AE-3 пройден.** Дальше — AE-4 (квесты Creation Club).
 
 ## AE-1/AE-2: сделано (2026-10-18)
 
