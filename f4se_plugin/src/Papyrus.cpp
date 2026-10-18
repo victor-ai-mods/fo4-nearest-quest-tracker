@@ -188,12 +188,12 @@ namespace NQT::Papyrus
 			return start ? NQT::GetStartRadioName(*start) : std::string{};
 		}
 
-		// PlayerCharacterQuestEvent::Notify (OG id 395737). Type 1 = "objective updated": PipboyQuestData::
+		// PlayerCharacterQuestEvent::Notify (OG id 395737, AE id 2232882). Type 1 = "objective updated": PipboyQuestData::
 		// ProcessEvent then runs UpdateObjective, which reads GetDisplayText again.
 		void NotifyObjectiveUpdated(RE::BGSInstancedQuestObjective* a_instance)
 		{
 			using func_t = void(std::int32_t, RE::BGSInstancedQuestObjective*);
-			static REL::Relocation<func_t*> func{ REL::ID(395737) };
+			static REL::Relocation<func_t*> func{ REL::ID(GameID(395737, 2232882)) };
 			constexpr std::int32_t kObjectiveUpdated = 1;
 			func(kObjectiveUpdated, a_instance);
 		}

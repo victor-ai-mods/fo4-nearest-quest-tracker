@@ -10,6 +10,20 @@
 
 using namespace std::literals;
 
+namespace NQT
+{
+	// Address Library id of an engine function this plugin calls itself: OG (1.10.163) or AE (1.11.x) DLL.
+	// AE ids were matched in the 1.11.191 disassembly (tools/fo4_ae.py), see the comment at each use.
+	[[nodiscard]] constexpr std::uint64_t GameID(std::uint64_t a_og, [[maybe_unused]] std::uint64_t a_ae) noexcept
+	{
+#ifdef NQT_AE
+		return a_ae;
+#else
+		return a_og;
+#endif
+	}
+}
+
 #ifdef NQT_AE
 #	include "Scaleform/Scaleform.h"
 
