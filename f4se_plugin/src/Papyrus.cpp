@@ -1,7 +1,6 @@
 #include "Papyrus.h"
 
 #include "EngineTypes.h"
-#include "HudDebug.h"
 #include "Interiors.h"
 #include "MapMarkers.h"
 #include "QuestCategories.h"
@@ -300,11 +299,6 @@ namespace NQT::Papyrus
 			NQT::DumpMapMarkers();
 		}
 
-		void DumpHudMessages(std::monostate, std::string_view a_tag)
-		{
-			NQT::DumpHudMessages(std::string(a_tag));
-		}
-
 		void DumpInteriors(std::monostate)
 		{
 			NQT::DumpInteriors();
@@ -368,7 +362,6 @@ namespace NQT::Papyrus
 		a_vm->BindNativeMethod(kScript, "GetObjectiveSignature"sv, GetObjectiveSignature, true);
 		a_vm->BindNativeMethod(kScript, "DumpQuestTargets"sv, DumpQuestTargets, true);
 		a_vm->BindNativeMethod(kScript, "DumpMapMarkers"sv, DumpMapMarkers, true);
-		a_vm->BindNativeMethod(kScript, "DumpHudMessages"sv, DumpHudMessages, true);  // queues a UI task
 		a_vm->BindNativeMethod(kScript, "DumpInteriors"sv, DumpInteriors, false);  // main thread: the player's cell updates its seen data
 		a_vm->BindNativeMethod(kScript, "GetMapMarkerName"sv, GetMapMarkerName, true);
 		a_vm->BindNativeMethod(kScript, "GetMapMarkerTypeName"sv, GetMapMarkerTypeName, true);

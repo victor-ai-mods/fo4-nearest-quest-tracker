@@ -96,11 +96,6 @@ Function DumpMapMarkers() native global
 ; Console: cgf "NQT_Native.DumpInteriors"
 Function DumpInteriors() native global
 
-; Debug: writes the state of the HUD's top-left message queue (queued/shown messages, their positions, frames and
-; texts) to NearestQuestTracker.log, tagged with asTag. Runs later on the UI thread.
-; Console: cgf "NQT_Native.DumpHudMessages" "console"
-Function DumpHudMessages(String asTag) native global
-
 ; The name of a map marker as the Pip-Boy map shows it; "" if akMarker is not a map marker.
 String Function GetMapMarkerName(ObjectReference akMarker) native global
 

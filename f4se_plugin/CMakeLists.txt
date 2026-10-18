@@ -45,7 +45,6 @@ configure_file(
 add_library(
 	"${PROJECT_NAME}"
 	SHARED
-	src/HudDebug.cpp
 	src/Interiors.cpp
 	src/main.cpp
 	src/MapMarkers.cpp
