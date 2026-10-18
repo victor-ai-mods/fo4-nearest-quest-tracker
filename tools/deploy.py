@@ -7,6 +7,8 @@
   python tools/deploy.py --ae [--dll …] — на стенд AE: MO2-мод «Nearest Quest Tracker (AE dev)» в
                                           D:\\Games\\MO2 Fallout 4 AE, плагин — в plugins.txt профиля
                                           «Nearest Quest Tracker» (профиль и строку в modlist.txt — один раз руками)
+  python tools/deploy.py --ng [--dll …] — на стенд NG 1.10.984: то же в D:\\Games\\MO2 Fallout 4 NG, мод
+                                          «Nearest Quest Tracker (NG dev)»; DLL — общая OG/NG (build/vs)
 
 DLL заменяется только при закрытой игре (иначе файл занят).
 
@@ -40,12 +42,25 @@ AE_MOD_NAME = 'Nearest Quest Tracker (AE dev)'
 AE_PROFILE = os.path.join(AE_MO2, 'profiles', 'Nearest Quest Tracker')
 
 
+# Стенд NG 1.10.984: так же, DLL та же, что для OG.
+NG_MO2 = r'D:\Games\MO2 Fallout 4 NG'
+NG_MOD_NAME = 'Nearest Quest Tracker (NG dev)'
+NG_PROFILE = os.path.join(NG_MO2, 'profiles', 'Nearest Quest Tracker')
+
+
 def use_ae():
     global GAME, DATA, PLUGIN_LISTS, BUILD
     GAME = AE_MO2
     DATA = os.path.join(AE_MO2, 'mods', AE_MOD_NAME)
     PLUGIN_LISTS = [os.path.join(AE_PROFILE, 'plugins.txt')]
     BUILD = 'ae'
+
+
+def use_ng():
+    global GAME, DATA, PLUGIN_LISTS
+    GAME = NG_MO2
+    DATA = os.path.join(NG_MO2, 'mods', NG_MOD_NAME)
+    PLUGIN_LISTS = [os.path.join(NG_PROFILE, 'plugins.txt')]
 
 
 def backup(path):
@@ -131,9 +146,12 @@ def main():
     ap.add_argument('--remove', action='store_true')
     ap.add_argument('--dll', choices=['debug', 'release'], default='debug')
     ap.add_argument('--ae', action='store_true')
+    ap.add_argument('--ng', action='store_true')
     args = ap.parse_args()
     if args.ae:
         use_ae()
+    elif args.ng:
+        use_ng()
     if args.remove:
         remove()
     else:
