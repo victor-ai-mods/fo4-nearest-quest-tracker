@@ -85,6 +85,17 @@ sLanguage работает), QuestStarts 138 / QuestCategories 377 в 62 (CC-ф�
 За 9 с до этого сеанса — crash-лог Buffout4 (18:48:13): access violation в `nvwgf2umx.dll` (драйвер NVIDIA), стек
 только из драйвера (его рабочий поток), NQT/игры в стеке нет; повторный запуск — нормально.
 
+**Release-DLL 2.3.0 на NG (18:59):** F1 / окно / отметка из окна работают, без [W]/[E]. Находка: F1 выбрал «Интерьер:
+Ячейка быстрого тестирования» — дверь `0024A1B1` (мир Goodneighbor, persistent, без замка и родителя включения) →
+`ccTOSFO4002Interior01` (FULL 0x3687A = «Quick Test Cell»). Это заготовка Creation Club (Neon Flats) в самом
+Fallout4.esm — и OG 1.10.163, и NG; на AE её перекрывает `cctosfo4002_neonflats.esm`. Таких заготовок с дверями из
+миров 7: Neon Flats, Shroud Manor (`cczsefo4002-smanor.esm`) ×3 двери, Vault-Tec homes (`ccvltfo4001-homes.esm`) ×3.
+Фикс 8911e25: `IsCreationClubStub` в `Interiors.cpp` — editor ID ячейки на `cc` и ни один из её `sourceFiles` не
+cc-плагин ⇒ пропуск («creation club stub»). Касается и AE без этих CC ⇒ AE-файл тоже обновить до 2.3.0.
+
+**PR в alandtse:** https://github.com/alandtse/CommonLibF4/pull/52 (ветка форка `ng-ids-bsscript-refr` = upstream
+master + тот же патч). Если примут — вернуть подмодуль на upstream.
+
 ## NG-4: релиз
 
 Одна DLL на OG и NG ⇒ основной файл Nexus («Nearest Quest Tracker») теперь для OG + NG; AE — отдельный файл.
