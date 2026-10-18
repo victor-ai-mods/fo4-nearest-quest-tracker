@@ -18,6 +18,31 @@ DLL загрузилась через MO2 (usvfs: путь к Address Library н
 Повторный запуск 2026-10-18: пользователь проверил всё — F1, F4, окно (обе вкладки, отметка кликом), Pip-Boy-текст
 цели старта, предмет в избранном. **AE-3 пройден.** Дальше — AE-4 (квесты Creation Club).
 
+## AE-4: квесты Creation Club (2026-10-18, в работе)
+
+**Категории — сделано** (5ed5a49, на стенде, в игре не проверено): `esm_index.py --ae` (мастера + 173 плагина из
+`Fallout4.ccc` → `_research\nqt-quests\esm_index_ae.pickle`), `ba2_strings.py` (таблицы строк плагинов из BA2: у cc-
+плагинов есть и `_en`, и `_ru`), `gen_quest_categories.py` → «Дополнения / Creation Club» (`dlc.cc`): 65 квестов
+cc-плагинов с целями (из 66; `ccOTMFO4001_VB` — служебный). Вики: ru-страницы про CC нет; en «Creation Club#Quests» —
+46 названий, 43 совпали с FULL квестов AE 1.11.191; «Home Away from Home» / «Legendary Hunt» — `vcHGS001FO4_*`
+(Verified Creation `vchgs001fo4_ncrbeasthunter.esm`, не из `Fallout4.ccc`) — у игрока попадут в «Другие квесты».
+Окно скрывает категории с 0 квестов → на OG без CC раздела не видно.
+
+**Как стартуют CC-квесты (для стартов, не закончено):**
+- 54 квеста (почти все основные) несут скрипт `CreationClub:StartAfterCharGenScript` (исходник — AE CK
+  `Data\Scripts\Source\CreationClub\CreationClub.zip`, распакован в `_research\ae-scripts\CreationClub`): OnInit →
+  если MQ102 стадия 10 (выход из Убежища 111) пройдена — `SetStage(MyStageToSet)`, иначе ждёт её. Флаг Start Game
+  Enabled — только у 7 (BestOfThree, Nuka MainQuest, EndlessRaidManager, OutcastQuest + OptionalVoice, ScavengerTwo,
+  RingQuest). Кто стартует остальные — не найдено: ссылок на квест нет ни в его плагине (кроме Hellfire: SeedQuest),
+  ни в Fallout4.esm, ни в .pex (поиск по всем BA2).
+- Сохранение стенда (OG-сейв 90 ур., загружен в AE с CC): квесты CC **работают** (рантайм-флаги 0x8101 = Enabled +
+  RunOnce + HasDialogueData; BFG fe01381e, Hellfire fe01486c, 12 собак fe03x803 …), но **ни одной пройденной стадии и
+  ни одной показанной цели** — в Pip-Boy их нет (DumpQuests.java, JDK 11:
+  `C:\Program Files\Microsoft\jdk-11.0.16.101-hotspot`).
+- Вики: в новой игре многие CC-квесты сами дают цель после выхода из Убежища («Deathmatch … will automatically appear»,
+  «A Place to Call Home: begins the next time a save is loaded»). Выжимка вики (given by / location / начало
+  прохождения): `_research\nqt-quests\cc\cc_infobox_en.txt`.
+
 ## AE-1/AE-2: сделано (2026-10-18)
 
 **Сборка.** Один исходник, две DLL: `cmake --preset vs` (OG+NG, alandtse) и `cmake --preset ae` (`NQT_AE=1`,
