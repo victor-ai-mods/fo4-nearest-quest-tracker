@@ -8,7 +8,7 @@
 - **Опасность alandtse на NG:** `REL::IDDB::id2offset` — `lower_bound` без проверки равенства (вне VR). ID «только OG»
   (`REL::ID(og)`) на NG молча даёт адрес *следующего* ID базы — без ошибки, падение или мусор потом.
 - **Какие ID реально в DLL:** `dumpbin /disasm` Release-DLL (с PDB) → все вызовы `IDDB::id2offset` /
-  `RelocationID::address|offset` и константы перед ними (скрипт `id_sites.py` был в scratchpad сессии: ищет
+  `RelocationID::address|offset` и константы перед ними (`D:Works_projectsallout4	oolsdll_id_sites.py <disasm.txt> <ng.bin> <og.bin>`: ищет
   `mov edx|qword ptr [rsp/rbp±X], imm` перед call, имя static из `?$TSS0@...` / `mov [?...],rax`). /OPT:REF ⇒ только
   то, что достижимо. Итог до правки: 12 ID «только OG» на путях NG — 7 своих + `BSScript::Object::DecRef` 541793,
   `ObjectBindPolicy::BindObject` 709728, `Stack::GetPageForFrame` 1429302, `TESObjectREFR::GetLock` 930785,
