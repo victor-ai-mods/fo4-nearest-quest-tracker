@@ -1,7 +1,9 @@
 """
 Архив для Nexus: release/NearestQuestTracker/ (раскладка как в Data) и release/NearestQuestTracker-<версия>.zip.
 
-    python tools/package.py 1.0.0
+    python tools/package.py 1.0.0         — для 1.10.163 (OG): release/NearestQuestTracker-1.0.0.zip
+    python tools/package.py 1.0.0 --ae    — для AE 1.11.x: release/NearestQuestTracker-AE-1.0.0.zip (AE-DLL из
+                                            f4se_plugin/build/ae/Release, остальное то же)
 
 Внутри: NearestQuestTracker.esp, Release-DLL в F4SE\\Plugins, Scripts\\NQT_*.pex, исходники
 Scripts\\Source\\User\\NQT_*.psc, MCM\\Config\\NearestQuestTracker\\*.json,
@@ -21,10 +23,10 @@ NAME = 'NearestQuestTracker'
 SCRIPTS = ['NQT_MainScript', 'NQT_Native', 'NQT_OpenWindowEffect']
 
 
-def files():
+def files(ae):
     """(источник, путь в архиве)."""
     out = [(os.path.join(BUILD, NAME + '.esp'), NAME + '.esp'),
-           (os.path.join(ROOT, 'f4se_plugin', 'build', 'vs', 'Release', NAME + '.dll'),
+           (os.path.join(ROOT, 'f4se_plugin', 'build', 'ae' if ae else 'vs', 'Release', NAME + '.dll'),
             os.path.join('F4SE', 'Plugins', NAME + '.dll'))]
     for script in SCRIPTS:
         out.append((os.path.join(BUILD, 'scripts', script + '.pex'), os.path.join('Scripts', script + '.pex')))
@@ -39,16 +41,18 @@ def files():
 
 
 def main():
-    if len(sys.argv) != 2:
-        sys.exit('версия? python tools/package.py 1.0.0')
-    version = sys.argv[1]
-    folder = os.path.join(OUT, NAME)
+    args = [a for a in sys.argv[1:] if a != '--ae']
+    ae = '--ae' in sys.argv[1:]
+    if len(args) != 1:
+        sys.exit('версия? python tools/package.py 1.0.0 [--ae]')
+    version = args[0]
+    folder = os.path.join(OUT, NAME + ('-AE' if ae else ''))
     os.makedirs(OUT, exist_ok=True)
     if os.path.exists(folder):
         shutil.rmtree(folder)
-    archive = os.path.join(OUT, '%s-%s.zip' % (NAME, version))
+    archive = os.path.join(OUT, '%s%s-%s.zip' % (NAME, '-AE' if ae else '', version))
     with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as z:
-        for src, rel in files():
+        for src, rel in files(ae):
             if not os.path.exists(src):
                 sys.exit('нет %s — сначала собери мод (README.ru.md, «Сборка»)' % src)
             dst = os.path.join(folder, rel)
