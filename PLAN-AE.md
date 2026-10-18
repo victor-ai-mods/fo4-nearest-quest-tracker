@@ -30,7 +30,7 @@ Address Library «All In One» 1.11.240 (Nexus 47327 file 408268) распако
 2.2.0» (fileId 416782, update 2.1.0, старый в архиве, Primary) и новый «Nearest Quest Tracker AE 2.2.0» (fileId 416783,
 Main, не Primary), описания файлов через перехват `edit-file`, версия мода 2.2.0, changelog 2.2.0 (из формы загрузки
 сохранился), Full description = `release/nexus-description.bbcode.txt` (12464 симв., сверено по хэшам строк).
-Дальше: версия для NG (стенд NG — когда докачается; база NG 1.10.984 уже в `_researchddress-library-aio`).
+Дальше: версия для NG (стенд NG — когда докачается; база NG 1.10.984 уже в `_research\address-library-aio`).
 
 ## AE-4: квесты Creation Club (2026-10-18, сделано)
 
