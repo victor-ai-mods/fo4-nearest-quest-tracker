@@ -1,8 +1,8 @@
 # Nearest Quest Tracker
 
 A Fallout 4 mod: one hotkey puts a marker on the nearest place to go - the nearest Pip-Boy quest objective, the
-start of a quest you have not started yet, an undiscovered location or a building you have never been inside -
-and removes the other markers. A window lists all quests by category and all undiscovered places, with mouse,
+start of a quest you have not started yet, an undiscovered location, a building you have never been inside or a
+bobblehead you have not picked up yet - and removes the other markers. A window lists all quests by category and all undiscovered places, with mouse,
 keyboard and gamepad controls.
 
 Русское описание - [README.ru.md](README.ru.md).
@@ -34,6 +34,8 @@ set in MCM:
 - **Undiscovered locations** - those on your map or compass, optionally any. Settlements are skipped.
 - **Interiors you have never been inside** - buildings, basements, caves; the marker goes on the door outside.
   Doors that need a key, and optionally locked doors that are a crime to pick, are skipped.
+- **Bobbleheads you have not picked up yet** (all 20); the marker goes on the bobblehead itself, through the doors of
+  its building. A bobblehead counts as found once you have its bonus.
 
 **Starts that cannot be taken now** are not picked and are shown with the reason in the window:
 
@@ -55,7 +57,8 @@ your current world come first, then the Commonwealth, Far Harbor and Nuka-World.
 - **Quests** tab: a category tree like the Fallout Wiki's (main, faction, side, DLC, other mods' quests) with
   "done/total" counters; the quests with world, distance and state (in the Pip-Boy, can be started, not started,
   completed, blocked by another quest, hostile faction or giver, started by the game but not taken yet - with the
-  place it holds). Filters: state, "with a marker only", world.
+  place it holds). Filters: state, "with a marker only", world. Bobbleheads have a section of their own there
+  ("Bobbleheads": those not found yet by distance, then the found ones).
 - **Search by part of the name**: press F (as in FallUI's barter search), type, Enter applies, Esc clears.
 - **Locations** tab: undiscovered locations and unvisited interiors. Filters: seen / all, locations / interiors,
   world.
@@ -65,8 +68,8 @@ your current world come first, then the Commonwealth, Far Harbor and Nuka-World.
   your favorites and the window opens with one gamepad button. The item returns to the inventory after use.
 
 Hotkeys (MCM, page *Nearest Quest Tracker*, none bound by default): **Mark nearest**, **Exclude marked** (marks the
-next nearest one; completed quests, discovered locations and visited interiors leave the exclusion list by
-themselves), **Restore last excluded** (MCM also lists all excluded targets), **Show current quest** (the tracked
+next nearest one; completed quests, discovered locations, visited interiors and found bobbleheads leave the
+exclusion list by themselves), **Restore last excluded** (MCM also lists all excluded targets), **Show current quest** (the tracked
 quest and what to do now), **Toggle automatic mode**, **Open window**.
 
 Settings:
@@ -82,6 +85,7 @@ Settings:
 | All locations (spoilers) | off | any undiscovered location, not only those on the map or compass |
 | Pick interiors | off | interiors you have never been inside |
 | Skip locked doors of others | on | skip interiors behind a locked door that is a crime to pick |
+| Pick bobbleheads | off | bobbleheads you have not picked up yet |
 | Only one marker | on | the hotkey removes all other markers |
 | Automatic | off | the nearest target is marked by itself when an objective is completed, a quest starts, a location is discovered or an interior entered |
 | Notifications | on | name the target that is now marked |
@@ -127,6 +131,13 @@ ids for five functions that had 1.10.163 ids only, sent upstream as
   (Add-ons / Creation Club) are taken from the Creation Club plugins themselves, names from their string tables.
 - **Locations** are the map markers of all worlds (their "visible" / "can travel" flags); **interiors** use the
   Pip-Boy local map fog of war (the cell's `ExtraSeenData`, saved in the save): never uncovered = never visited.
+- **Bobbleheads** (`Bobbleheads.json`, `tools/gen_bobbleheads.py`) are the persistent refs of the items with the
+  vanilla bobblehead scripts; found = the player has the bonus they give (the skill perk, or the `PerksQuest` stage
+  of a S.P.E.C.I.A.L. one) - what those scripts check themselves.
+- **Leftover markers.** When a marker moves while the engine is still building the path to its old target (for
+  example the moment you walk into a marked interior), the engine keeps the old target and its marker on the map
+  for the rest of the session. The DLL hands those finished path builds back to the engine
+  (`CheckForDeferredBuildResults`), which then drops the old target.
 - **The window** is an own Scaleform menu (`menu/NQTMenu.as`, compiled into a SWF by JPEXS FFDec), registered with
   F4SE's `UI.RegisterCustomMenu`. It reads its lists from the DLL through F4SE's Scaleform interface
   (`f4se.plugins.NearestQuestTracker`) and sends actions back to the script with `SendExternalEvent`.
@@ -158,9 +169,9 @@ default `..\_tools\f4se_0_06_23\Scripts\Source`).
 ```
 python tools/build.py --release     # DLL, NearestQuestTracker.esp, MCM files, window SWF, Papyrus scripts
 python tools/deploy.py --dll release
-python tools/package.py 2.3.0       # release\NearestQuestTracker-2.3.0.zip (1.10.163 + 1.10.984)
+python tools/package.py 2.4.0       # release\NearestQuestTracker-2.4.0.zip (1.10.163 + 1.10.984)
 python tools/build.py --release --ae         # the same with the AE DLL (f4se_plugin\build\ae)
-python tools/package.py 2.3.0 --ae           # release\NearestQuestTracker-AE-2.3.0.zip
+python tools/package.py 2.4.0 --ae           # release\NearestQuestTracker-AE-2.4.0.zip
 ```
 
 Quest starts and Creation Club categories need the AE index: `python tools/esm_index.py --ae` (reads the masters and
