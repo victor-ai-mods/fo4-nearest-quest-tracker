@@ -1,5 +1,6 @@
 #include "Version.h"
 
+#include "Bobbleheads.h"
 #include "Papyrus.h"
 #include "QuestCategories.h"
 #include "QuestDistance.h"
@@ -21,6 +22,7 @@ namespace
 				locationQuest ? locationQuest->GetFormID() : 0u);
 			NQT::LoadQuestStarts();
 			NQT::LoadQuestCategories();
+			NQT::LoadBobbleheads();
 
 			const auto player = RE::PlayerCharacter::GetSingleton();
 			logger::info("game data ready; player {:p}, objectives {}, language {}"sv,

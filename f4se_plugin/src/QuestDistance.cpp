@@ -1,5 +1,6 @@
 #include "QuestDistance.h"
 
+#include "Bobbleheads.h"
 #include "EngineTypes.h"
 #include "MapMarkers.h"
 #include "QuestStarts.h"
@@ -701,6 +702,9 @@ namespace NQT
 			return std::format("interior {:08X} \"{}\" door {:08X}"sv, a_candidate.interior->GetFormID(), name ? name : "",
 				a_candidate.location ? a_candidate.location->GetFormID() : 0u);
 		}
+		if (a_candidate.bobblehead && a_candidate.location) {
+			return std::format("bobblehead {:08X} \"{}\""sv, a_candidate.location->GetFormID(), GetBobbleheadName(*a_candidate.location));
+		}
 		if (a_candidate.location) {
 			return std::format("location {:08X} \"{}\""sv, a_candidate.location->GetFormID(), GetMapMarkerName(*a_candidate.location));
 		}
@@ -782,5 +786,66 @@ namespace NQT
 			});
 		}
 		logger::info("=== end of dump ==="sv);
+	}
+
+	namespace
+	{
+		// `anonymous namespace'::CheckForDeferredBuildResults(TESQuestTarget::REF_DATA*) (OG id 1552650 rva 5FB980;
+		// NG/AE id 2208096: AE rva 684880, NG rva 630F00 - found by its code: cmp [rcx+58h],0 + TryPop + TeleportPath
+		// copy from the result +140h, the only such function in each exe). Takes the finished path build's result:
+		// copies the path and clears REF_DATA +0x58; does nothing while the build still runs.
+		bool CheckForDeferredBuildResults(Engine::QuestTargetRefData* a_ref)
+		{
+			using func_t = bool(Engine::QuestTargetRefData*);
+			static REL::Relocation<func_t*> func{ GameID(1552650, 2208096) };
+			return func(a_ref);
+		}
+	}
+
+	std::size_t ReleaseStaleTargets(const RE::TESQuest& a_quest)
+	{
+		const auto player = RE::PlayerCharacter::GetSingleton();
+		if (!player) {
+			return 0;
+		}
+		std::vector<RE::ObjectRefHandle> aliased;
+		{
+			RE::BSAutoReadLock lock{ const_cast<RE::TESQuest&>(a_quest).aliasAccessLock };
+			const auto& handles = Engine::GetAliasHandles(a_quest);
+			for (std::uint32_t i = 0; i < handles.size; ++i) {
+				for (const auto handle : handles.data[i].Handles()) {
+					aliased.push_back(handle);
+				}
+			}
+		}
+		std::size_t released = 0, pending = 0;
+		RE::BSAutoLock lock{ player->questTargetLock };
+		for (const auto objective : a_quest.objectives) {
+			const auto data = Engine::AsObjective(objective);
+			if (!data || !data->targets) {
+				continue;
+			}
+			for (std::uint32_t t = 0; t < data->numTargets; ++t) {
+				const auto target = data->targets[t];
+				if (!target) {
+					continue;
+				}
+				for (const auto ref : target->refs) {
+					if (!ref || !ref->pendingBuild || std::ranges::find(aliased, ref->target) != aliased.end()) {
+						continue;
+					}
+					CheckForDeferredBuildResults(ref);
+					if (ref->pendingBuild) {
+						++pending;
+					} else {
+						++released;
+					}
+				}
+			}
+		}
+		if (released || pending) {
+			logger::info("stale targets of {}: {} released, {} still building"sv, DescribeQuest(a_quest), released, pending);
+		}
+		return released;
 	}
 }

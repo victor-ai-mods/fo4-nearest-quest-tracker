@@ -39,6 +39,10 @@ namespace NQT
 	// "Plugin.esp|ID" (data files) -> loaded FormID; 0 if the plugin is not loaded or the text is malformed.
 	[[nodiscard]] std::uint32_t ResolveID(std::string_view a_key);
 
+	// TESQuest::IsStageDone (OG rva 5D7370) without its hash table: TESQuestStage +0x18 is the stage
+	// index, bit 0 of +0x1A is "done". TESQuestStage has no layout in CommonLibF4.
+	[[nodiscard]] bool IsQuestStageDone(const RE::TESQuest& a_quest, std::uint16_t a_stage) noexcept;
+
 	// Reads Data\F4SE\Plugins\NearestQuestTracker\QuestStarts.json and QuestStarts-user.json.
 	// Entries whose plugins are not loaded are skipped. Call once game data is loaded.
 	void LoadQuestStarts();

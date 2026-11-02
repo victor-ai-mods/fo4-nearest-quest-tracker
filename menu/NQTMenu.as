@@ -60,6 +60,7 @@ package
 		private static const KIND_NO_MARKER:int = 2;
 		private static const KIND_LOCATION:int = 4;
 		private static const KIND_INTERIOR:int = 5;
+		private static const KIND_BOBBLEHEAD:int = 6;
 		// Поле state строки квеста (Window.h).
 		private static const STATE_PIPBOY:int = 1;
 		private static const STATE_CAN_START:int = 2;
@@ -69,6 +70,9 @@ package
 		private static const STATE_CLOSED:int = 6;       // фракция квеста враждебна игроку (изгнали)
 		private static const STATE_GIVER_HOSTILE:int = 7;  // квестодатель враждебен игроку
 		private static const STATE_RUNNING:int = 8;        // запущен игрой (в фоне), но не взят: в Pip-Boy его нет
+		private static const STATE_BOBBLEHEAD:int = 9;     // пупс не найден (найденный — STATE_COMPLETED)
+		// Категория строк-пупсов (Window.cpp kBobbleheadCategory): раздел верхнего уровня дерева квестов.
+		private static const BOBBLEHEAD_CATEGORY:String = "bobbleheads";
 		// Фильтр состояния: невыполненные (по умолчанию), все, в Pip-Boy, можно начать, не начатые, выполненные.
 		private static const STATE_FILTERS:int = 6;
 
@@ -1019,7 +1023,7 @@ package
 			var count:int = 0;
 			for (var i:int = 0; i < quests.length; i++)
 			{
-				if (quests[i].state != STATE_COMPLETED)
+				if (quests[i].state != STATE_COMPLETED && quests[i].category != BOBBLEHEAD_CATEGORY)
 				{
 					count++;
 				}
@@ -1149,8 +1153,10 @@ package
 				case STATE_NOT_OFFERED:
 					return data.blockedBy ? T("мешает «" + data.blockedBy + "»", "blocked by " + data.blockedBy)
 						: T("временно недоступен", "not offered now");
+				case STATE_BOBBLEHEAD:
+					return T("не найден", "not found");
 				case STATE_COMPLETED:
-					return T("выполнен", "completed");
+					return data.category == BOBBLEHEAD_CATEGORY ? T("найден", "found") : T("выполнен", "completed");
 			}
 			return "";
 		}

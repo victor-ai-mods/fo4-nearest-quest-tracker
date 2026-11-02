@@ -42,13 +42,21 @@ namespace NQT::Engine
 	static_assert(sizeof(TeleportPath) == 0x50);
 
 	// TESQuestTarget::REF_DATA: one resolved target reference with its path from the player.
+	// pendingBuild: a path build in progress (DeferredBuildPathToTarget sets it, CheckForDeferredBuildResults takes
+	// the result and clears it). TESQuestTarget::UpdateTargetArray (OG rva 5FB0B0) keeps a REF_DATA with a pending
+	// build without checking it, and only REF_DATAs of refs the alias still holds get CheckForDeferredBuildResults -
+	// so a REF_DATA whose ref left the alias while its build ran stays forever, with its marker (see
+	// ReleaseStaleTargets). Same offsets on NG/AE (CheckForDeferredBuildResults id 2208096 reads +0x58).
 	class QuestTargetRefData
 	{
 	public:
-		TeleportPath        path;    // 00
-		RE::ObjectRefHandle target;  // 50
+		TeleportPath        path;          // 00
+		RE::ObjectRefHandle target;        // 50
+		std::uint32_t       unk54;         // 54
+		void*               pendingBuild;  // 58 - BSTSmartPointer<BSActorPathingMessageQueue>
 	};
 	static_assert(offsetof(QuestTargetRefData, target) == 0x50);
+	static_assert(offsetof(QuestTargetRefData, pendingBuild) == 0x58);
 
 	class QuestTarget
 	{

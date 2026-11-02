@@ -8,7 +8,7 @@
 Внутри: NearestQuestTracker.esp, Release-DLL в F4SE\\Plugins, Scripts\\NQT_*.pex, исходники
 Scripts\\Source\\User\\NQT_*.psc, MCM\\Config\\NearestQuestTracker\\*.json,
 Interface\\Translations\\NearestQuestTracker_{en,ru}.txt,
-F4SE\\Plugins\\NearestQuestTracker\\QuestStarts.json, QuestCategories.json + их *-user.example.json.
+F4SE\\Plugins\\NearestQuestTracker\\QuestStarts.json, QuestCategories.json + их *-user.example.json, Bobbleheads.json.
 """
 
 import os

@@ -456,19 +456,6 @@ namespace NQT
 			return false;
 		}
 
-		// TESQuest::IsStageDone (OG rva 5D7370) without its hash table: TESQuestStage +0x18 is the stage
-		// index, bit 0 of +0x1A is "done". TESQuestStage has no layout in CommonLibF4.
-		[[nodiscard]] bool IsStageDone(const RE::TESQuest& a_quest, std::uint16_t a_stage) noexcept
-		{
-			for (const auto stage : a_quest.stages) {
-				const auto bytes = reinterpret_cast<const std::byte*>(stage);
-				if (bytes && *reinterpret_cast<const std::uint16_t*>(bytes + 0x18) == a_stage) {
-					return (std::to_integer<std::uint8_t>(bytes[0x1A]) & 1) != 0;
-				}
-			}
-			return false;
-		}
-
 		[[nodiscard]] bool IsStarted(const QuestStart& a_start, const ShownObjectives& a_shown)
 		{
 			if (a_start.radiant) {
@@ -478,7 +465,7 @@ namespace NQT
 				return true;
 			}
 			if (a_start.stage) {
-				return IsStageDone(*a_start.quest, *a_start.stage);
+				return IsQuestStageDone(*a_start.quest, *a_start.stage);
 			}
 			const auto it = a_shown.find(a_start.quest);
 			if (it == a_shown.end()) {
@@ -633,6 +620,17 @@ namespace NQT
 								 a_point->pos.x, a_point->pos.y, a_point->pos.z) :
 			                 "none"s;
 		}
+	}
+
+	bool IsQuestStageDone(const RE::TESQuest& a_quest, std::uint16_t a_stage) noexcept
+	{
+		for (const auto stage : a_quest.stages) {
+			const auto bytes = reinterpret_cast<const std::byte*>(stage);
+			if (bytes && *reinterpret_cast<const std::uint16_t*>(bytes + 0x18) == a_stage) {
+				return (std::to_integer<std::uint8_t>(bytes[0x1A]) & 1) != 0;
+			}
+		}
+		return false;
 	}
 
 	void LoadQuestStarts()

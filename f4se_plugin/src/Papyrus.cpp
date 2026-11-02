@@ -1,5 +1,6 @@
 #include "Papyrus.h"
 
+#include "Bobbleheads.h"
 #include "EngineTypes.h"
 #include "Interiors.h"
 #include "MapMarkers.h"
@@ -31,6 +32,7 @@ namespace NQT::Papyrus
 		constexpr std::int32_t kSourceInteriors = 16; // interiors never entered
 		constexpr std::int32_t kSourceSkipOwnedLocked = 32;  // with kSourceInteriors: skip locked doors that are a crime to pick
 		constexpr std::int32_t kSourceRadiant = 64;   // givers of radiant quests while they offer one
+		constexpr std::int32_t kSourceBobbleheads = 128;  // bobbleheads not found yet
 
 		// First element of FindNearestTarget's result.
 		enum class TargetKind : std::int32_t
@@ -41,6 +43,7 @@ namespace NQT::Papyrus
 			kStart = 3,     // start point of a quest not started yet
 			kLocation = 4,  // map marker not discovered yet
 			kInterior = 5,  // interior never entered; the marker goes on its door
+			kBobblehead = 6,  // bobblehead not found yet; the marker goes on it
 		};
 
 		std::unordered_set<const RE::TESForm*> FormsOf(RE::BGSListForm* a_list)
@@ -97,6 +100,9 @@ namespace NQT::Papyrus
 			if (a_sources & kSourceInteriors) {
 				std::ranges::move(CollectInteriorCandidates((a_sources & kSourceSkipOwnedLocked) != 0), std::back_inserter(candidates));
 			}
+			if (a_sources & kSourceBobbleheads) {
+				std::ranges::move(CollectBobbleheadCandidates(), std::back_inserter(candidates));
+			}
 			const auto nearest = FindNearest(candidates, [&](const Candidate& a_candidate) {
 				return a_candidate.interior ? excludedInteriors.contains(a_candidate.interior) :
 				       a_candidate.location ? excludedLocations.contains(a_candidate.location) :
@@ -106,7 +112,8 @@ namespace NQT::Papyrus
 				logger::debug("  -> none"sv);
 				return { 0, 0, 0 };
 			}
-			const auto kind = nearest->interior ? TargetKind::kInterior :
+			const auto kind = nearest->bobblehead ? TargetKind::kBobblehead :
+			                  nearest->interior ? TargetKind::kInterior :
 			                  nearest->location ? TargetKind::kLocation :
 			                  nearest->start    ? TargetKind::kStart :
 			                  nearest->noMarker ? TargetKind::kNoMarker :
@@ -324,6 +331,25 @@ namespace NQT::Papyrus
 			return !a_door || IsDoorInteriorVisited(*a_door);
 		}
 
+		// True also for a ref that is no bobblehead (nothing left to find there).
+		bool IsBobbleheadFound(std::monostate, RE::TESObjectREFR* a_ref)
+		{
+			const auto bobblehead = a_ref ? FindBobblehead(*a_ref) : nullptr;
+			return !bobblehead || NQT::IsBobbleheadFound(*bobblehead);
+		}
+
+		std::string GetBobbleheadName(std::monostate, RE::TESObjectREFR* a_ref)
+		{
+			return a_ref ? NQT::GetBobbleheadName(*a_ref) : std::string{};
+		}
+
+		// The marker quests change their alias often (NQT_MainScript ShowLocation / ShowStart / Clear*, polls):
+		// releases the engine's stale targets of a_quest (QuestDistance.h ReleaseStaleTargets).
+		std::int32_t ReleaseStaleTargets(std::monostate, RE::TESQuest* a_quest)
+		{
+			return a_quest ? static_cast<std::int32_t>(NQT::ReleaseStaleTargets(*a_quest)) : 0;
+		}
+
 		std::string GetQuestCategory(std::monostate, RE::TESQuest* a_quest)
 		{
 			return a_quest ? NQT::GetQuestCategory(*a_quest) : std::string{};
@@ -369,6 +395,9 @@ namespace NQT::Papyrus
 		a_vm->BindNativeMethod(kScript, "IsInteriorVisited"sv, IsInteriorVisited, true);
 		a_vm->BindNativeMethod(kScript, "GetQuestCategory"sv, GetQuestCategory, true);
 		a_vm->BindNativeMethod(kScript, "GetQuestCategoryName"sv, GetQuestCategoryName, true);
+		a_vm->BindNativeMethod(kScript, "IsBobbleheadFound"sv, IsBobbleheadFound, true);
+		a_vm->BindNativeMethod(kScript, "GetBobbleheadName"sv, GetBobbleheadName, true);
+		a_vm->BindNativeMethod(kScript, "ReleaseStaleTargets"sv, ReleaseStaleTargets, false);  // main thread: the compass updates the targets
 		logger::info("registered {} native functions"sv, kScript);
 		return true;
 	}

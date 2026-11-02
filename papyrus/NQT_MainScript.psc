@@ -6,10 +6,11 @@ from QuestStarts.json; NQT_IncludeLocations: map markers not discovered yet; NQT
 entered, by the Pip-Boy local map fog of war), all mixed by distance within a world (the DLL orders by world: the
 player's, Commonwealth, Far Harbor, Nuka-World). A Pip-Boy quest is tracked with SetActive; a start point and a
 location get a marker of their own (NQT_StartQuest, NQT_LocationQuest: Miscellaneous quests with one objective on one
-alias); an interior shares the location marker, put on the door into it. With NQT_UntrackOthers every other marker is removed.
+alias); an interior shares the location marker, put on the door into it, and so does a bobblehead not found yet
+(NQT_IncludeBobbleheads, Bobbleheads.json), put on the bobblehead. With NQT_UntrackOthers every other marker is removed.
 ExcludeCurrent puts the marked target on the exclusion list and marks the next nearest; RestoreLast takes the last
 one back. Auto mode marks the nearest target again whenever the Pip-Boy objectives change, a start marker's quest
-starts, the marked location is discovered or the marked interior entered.}
+starts, the marked location is discovered, the marked interior entered or the marked bobblehead picked up.}
 
 GlobalVariable Property NQT_UntrackOthers Auto Const Mandatory
 {1 = only one marker: TrackNearest removes all others (MCM).}
@@ -44,6 +45,8 @@ GlobalVariable Property NQT_SkipOwnedLocked Auto Const Mandatory
 {1 = interiors behind a locked door that is a crime to pick are skipped (MCM "Skip locked doors of others").}
 GlobalVariable Property NQT_ShowQuestInWindow Auto Const Mandatory
 {1 = ShowCurrentQuest shows a message window instead of notifications (MCM "Current quest in a window").}
+GlobalVariable Property NQT_IncludeBobbleheads Auto Const Mandatory
+{1 = TrackNearest picks bobbleheads not found yet (MCM "Pick bobbleheads"); they share the location marker.}
 Potion Property NQT_WindowItem Auto Const Mandatory
 {The item "Nearest Quest Tracker": using it opens the window (with a gamepad: from the favorites).}
 
@@ -55,7 +58,7 @@ Int Property MCMRestoreChoice = 0 Auto Hidden
 Int SetupVersion = 0
 Form[] ExcludedItems    ; excluded quests (Quest), locations (map marker) and interiors (door), oldest first
 String[] ExcludedItemNames  ; their names, taken when each was excluded
-Int[] ExcludedKinds     ; KindQuest, KindStart, KindLocation or KindInterior for each of ExcludedItems
+Int[] ExcludedKinds     ; KindQuest, KindStart, KindLocation, KindInterior or KindBobblehead for each of ExcludedItems
 Int LastKind = 0        ; kind of the target the mod marked last (Kind*)
 Quest LastTracked       ; the quest the mod marked last (Pip-Boy quest or start point)
 Int LastSignature = 0   ; NQT_Native.GetObjectiveSignature at the previous auto tick
@@ -65,6 +68,7 @@ Int ShownMarkerID = 0   ; FormID of the ref in StartRef
 ObjectReference ShownLocation       ; the map marker (or interior door) under the location marker; None if none
 Bool ShownLocationNamed = false     ; its objective names it (else "Undiscovered location: <icon type>")
 Bool ShownInterior = false          ; ShownLocation is the door into an interior
+Bool ShownBobblehead = false        ; ShownLocation is a bobblehead
 ; Before SetupVersion 3 (moved into ExcludedItems by Setup, then None):
 Quest[] Excluded
 String[] Names
@@ -92,6 +96,7 @@ Int Property SourceLocations = 8 AutoReadOnly Hidden
 Int Property SourceInteriors = 16 AutoReadOnly Hidden
 Int Property SourceSkipOwnedLocked = 32 AutoReadOnly Hidden ; with SourceInteriors
 Int Property SourceRadiant = 64 AutoReadOnly Hidden ; givers of radiant quests while they offer one
+Int Property SourceBobbleheads = 128 AutoReadOnly Hidden ; bobbleheads not found yet
 ; Target kinds: element 0 of NQT_Native.FindNearestTarget's result, LastKind, ExcludedKinds (KindQuest for both
 ; Pip-Boy kinds there).
 Int Property KindNone = 0 AutoReadOnly Hidden
@@ -100,6 +105,7 @@ Int Property KindNoMarker = 2 AutoReadOnly Hidden
 Int Property KindStart = 3 AutoReadOnly Hidden
 Int Property KindLocation = 4 AutoReadOnly Hidden
 Int Property KindInterior = 5 AutoReadOnly Hidden
+Int Property KindBobblehead = 6 AutoReadOnly Hidden
 
 ; Own window (menu/NQTMenu.as -> Interface\NearestQuestTracker.swf); the name is the one NQTMenu.MENU_NAME closes.
 String Property WindowMenu = "NQT_Menu" AutoReadOnly Hidden
@@ -222,7 +228,7 @@ Function ExcludeCurrent()
         Return
     EndIf
     Form target
-    If kind == KindLocation || kind == KindInterior
+    If IsLocationKind(kind)
         target = ShownLocation
     ElseIf kind == KindStart
         target = ShownStart
@@ -235,8 +241,8 @@ Function ExcludeCurrent()
 EndFunction
 
 ; Puts akTarget on the exclusion list: aiKind KindQuest or KindNoMarker (a Pip-Boy quest: untracked), KindStart (a
-; quest not started: its start marker goes if shown), KindLocation or KindInterior (a map marker or the door into an
-; interior: the location marker goes if it is on it).
+; quest not started: its start marker goes if shown), KindLocation, KindInterior or KindBobblehead (a map marker, the
+; door into an interior or a bobblehead: the location marker goes if it is on it).
 Function ExcludeTarget(Int aiKind, Form akTarget)
     If !akTarget
         Return
@@ -244,17 +250,17 @@ Function ExcludeTarget(Int aiKind, Form akTarget)
     Bool russian = IsRussian()
     Int kind = aiKind
     String name
-    If kind == KindLocation || kind == KindInterior
+    If IsLocationKind(kind)
         ObjectReference ref = akTarget as ObjectReference
-        Bool named = kind == KindInterior || NQT_AllLocations.GetValue() != 0.0 || ref.IsMapMarkerVisible()
+        Bool named = kind != KindLocation || NQT_AllLocations.GetValue() != 0.0 || ref.IsMapMarkerVisible()
         If ref == ShownLocation
             named = ShownLocationNamed
             ClearLocation()
-            If LastKind == KindLocation || LastKind == KindInterior
+            If IsLocationKind(LastKind)
                 LastKind = KindNone
             EndIf
         EndIf
-        name = LocationName(ref, named, kind == KindInterior, russian)
+        name = LocationName(ref, named, kind, russian)
     ElseIf kind == KindStart
         Quest q = akTarget as Quest
         name = StartName(q, russian)
@@ -326,7 +332,7 @@ Function ShowCurrentQuest()
     quests.Clear()
     Bool startShown = NQT_StartQuest.IsActive() && NQT_StartQuest.IsObjectiveDisplayed(StartObjective)
     Bool locationShown = NQT_LocationQuest.IsActive() && NQT_LocationQuest.IsObjectiveDisplayed(LocationObjective)
-    If (LastKind == KindLocation || LastKind == KindInterior) && locationShown
+    If IsLocationKind(LastKind) && locationShown
         quests.Add(NQT_LocationQuest)
     ElseIf LastKind == KindStart && startShown
         quests.Add(NQT_StartQuest)
@@ -435,7 +441,7 @@ Function OnWindowAction(String asAction, Int aiKind, Int aiQuestID, Int aiRefID)
         q = Game.GetForm(aiQuestID) as Quest
     EndIf
     Form target = q
-    If aiKind == KindLocation || aiKind == KindInterior
+    If IsLocationKind(aiKind)
         target = Game.GetForm(aiRefID)
     EndIf
     NQT_Native.Log("OnWindowAction: " + asAction + " kind " + aiKind + " " + q + " ref " + aiRefID + " -> " + target)
@@ -541,8 +547,8 @@ Function RestoreAll()
     RestoreKind(KindNone)
 EndFunction
 
-; Buttons "Restore active quests" / "new quests" / "locations" / "interiors": aiKind KindQuest / KindStart /
-; KindLocation / KindInterior; KindNone = all.
+; Buttons "Restore active quests" / "new quests" / "locations" / "interiors" / "bobbleheads": aiKind KindQuest /
+; KindStart / KindLocation / KindInterior / KindBobblehead; KindNone = all.
 Function RestoreKind(Int aiKind)
     Setup()
     Int count = 0
@@ -603,7 +609,8 @@ Bool Function Track(Bool abAuto)
 EndFunction
 
 ; Marks one target: aiKind KindQuest / KindNoMarker (akQuest is tracked), KindStart (akQuest's start marker goes on
-; the ref aiMarkerID), KindLocation / KindInterior (the location marker goes on the map marker / door aiMarkerID).
+; the ref aiMarkerID), KindLocation / KindInterior / KindBobblehead (the location marker goes on the map marker / door /
+; bobblehead aiMarkerID).
 ; The rest as Track: NQT_UntrackOthers, LastKind / LastTracked, the notification. Returns true if something is marked.
 Bool Function Mark(Int aiKind, Quest akQuest, Int aiMarkerID, Bool abAuto)
     Bool russian = IsRussian()
@@ -616,9 +623,9 @@ Bool Function Mark(Int aiKind, Quest akQuest, Int aiMarkerID, Bool abAuto)
 
     Bool alreadyTracked = false
     Bool shown = false
-    If (kind == KindLocation || kind == KindInterior) && marker
+    If IsLocationKind(kind) && marker
         alreadyTracked = marker == ShownLocation && NQT_LocationQuest.IsObjectiveDisplayed(LocationObjective)
-        shown = ShowLocation(marker, kind == KindInterior)
+        shown = ShowLocation(marker, kind)
     ElseIf kind == KindStart && q
         alreadyTracked = q == ShownStart && NQT_StartQuest.IsActive()
         shown = ShowStart(q, aiMarkerID)
@@ -641,7 +648,7 @@ Bool Function Mark(Int aiKind, Quest akQuest, Int aiMarkerID, Bool abAuto)
         If kind != KindStart
             ClearStart()
         EndIf
-        If kind != KindLocation && kind != KindInterior
+        If !IsLocationKind(kind)
             ClearLocation()
         EndIf
     EndIf
@@ -657,8 +664,8 @@ Bool Function Mark(Int aiKind, Quest akQuest, Int aiMarkerID, Bool abAuto)
     EndIf
 
     String label
-    If kind == KindLocation || kind == KindInterior
-        label = LocationLabel(marker, ShownLocationNamed, ShownInterior, russian)
+    If IsLocationKind(kind)
+        label = LocationLabel(marker, ShownLocationNamed, kind, russian)
     ElseIf kind == KindStart
         label = StartLabel(q, russian)
     ElseIf kind == KindNoMarker
@@ -697,6 +704,9 @@ Int Function Sources()
             sources += SourceSkipOwnedLocked
         EndIf
     EndIf
+    If NQT_IncludeBobbleheads.GetValue() != 0.0
+        sources += SourceBobbleheads
+    EndIf
     Return sources
 EndFunction
 
@@ -725,6 +735,7 @@ Bool Function ShowStart(Quest akQuest, Int aiMarkerID)
         NQT_StartQuest.SetObjectiveDisplayed(StartObjective, true, true)
     EndIf
     NQT_StartQuest.SetActive(true)
+    NQT_Native.ReleaseStaleTargets(NQT_StartQuest)
     NQT_Native.Log("ShowStart: " + akQuest + " marker on " + target + " (changed " + changed + ")")
     CancelTimer(StartPollTimer)
     StartTimer(StartPollInterval, StartPollTimer)
@@ -745,6 +756,7 @@ Function ClearStart()
         startRef.Clear()
     EndIf
     NQT_StartQuest.SetActive(false)
+    NQT_Native.ReleaseStaleTargets(NQT_StartQuest)
 EndFunction
 
 ; While a start marker is shown: move it onto the giver once the giver is in memory (its cell loaded), and
@@ -753,6 +765,7 @@ Function PollStart()
     If !ShownStart
         Return
     EndIf
+    NQT_Native.ReleaseStaleTargets(NQT_StartQuest)  ; a path build to an earlier ref may have finished by now
     Int markerID = NQT_Native.GetStartMarkerID(ShownStart)
     If markerID == 0
         NQT_Native.Log("PollStart: " + ShownStart + " started or no longer available")
@@ -840,10 +853,10 @@ EndFunction
 ; ---------------------------------------------------------------------------------------------------
 ; Location marker
 
-; Points LocationRef at the map marker (abInterior: the door into the interior) and shows the objective (again if
-; the target changed, so that the HUD names the new one). Named: an interior, a location on the map (seen), or
-; "All locations" is on.
-Bool Function ShowLocation(ObjectReference akMarker, Bool abInterior)
+; Points LocationRef at the map marker (aiKind KindInterior: the door into the interior; KindBobblehead: the bobblehead)
+; and shows the objective (again if the target changed, so that the HUD names the new one). Named: an interior, a
+; bobblehead, a location on the map (seen), or "All locations" is on.
+Bool Function ShowLocation(ObjectReference akMarker, Int aiKind)
     ReferenceAlias locationRef = NQT_LocationQuest.GetAlias(LocationRefAlias) as ReferenceAlias
     If !locationRef
         NQT_Native.Log("ShowLocation: no alias " + LocationRefAlias)
@@ -854,8 +867,9 @@ Bool Function ShowLocation(ObjectReference akMarker, Bool abInterior)
     EndIf
     Bool changed = akMarker != ShownLocation
     ShownLocation = akMarker
-    ShownInterior = abInterior
-    ShownLocationNamed = abInterior || NQT_AllLocations.GetValue() != 0.0 || akMarker.IsMapMarkerVisible()
+    ShownInterior = aiKind == KindInterior
+    ShownBobblehead = aiKind == KindBobblehead
+    ShownLocationNamed = aiKind != KindLocation || NQT_AllLocations.GetValue() != 0.0 || akMarker.IsMapMarkerVisible()
     locationRef.ForceRefTo(akMarker)
     SetLocationText()
     If changed || !NQT_LocationQuest.IsObjectiveDisplayed(LocationObjective)
@@ -863,6 +877,7 @@ Bool Function ShowLocation(ObjectReference akMarker, Bool abInterior)
         NQT_LocationQuest.SetObjectiveDisplayed(LocationObjective, true, true)
     EndIf
     NQT_LocationQuest.SetActive(true)
+    NQT_Native.ReleaseStaleTargets(NQT_LocationQuest)
     CancelTimer(LocationPollTimer)
     StartTimer(LocationPollInterval, LocationPollTimer)
     Return true
@@ -877,29 +892,34 @@ Function ClearLocation()
     ShownLocation = None
     ShownLocationNamed = false
     ShownInterior = false
+    ShownBobblehead = false
     NQT_LocationQuest.SetObjectiveDisplayed(LocationObjective, false)
     ReferenceAlias locationRef = NQT_LocationQuest.GetAlias(LocationRefAlias) as ReferenceAlias
     If locationRef
         locationRef.Clear()
     EndIf
     NQT_LocationQuest.SetActive(false)
+    NQT_Native.ReleaseStaleTargets(NQT_LocationQuest)
 EndFunction
 
 ; While the location marker is shown: remove it once the location is discovered (the game says so itself), the
-; interior entered, or the marker or door disabled, and with the auto mode mark the next target; name a location
-; once it appears on the map.
+; interior entered, the bobblehead picked up, or the marker, door or bobblehead disabled, and with the auto mode mark
+; the next target; name a location once it appears on the map.
 Function PollLocation()
     If !ShownLocation
         Return
     EndIf
+    NQT_Native.ReleaseStaleTargets(NQT_LocationQuest)  ; a path build to an earlier ref may have finished by now
     Bool done
-    If ShownInterior
+    If ShownBobblehead
+        done = NQT_Native.IsBobbleheadFound(ShownLocation)
+    ElseIf ShownInterior
         done = NQT_Native.IsInteriorVisited(ShownLocation)
     Else
         done = ShownLocation.CanFastTravelToMarker()
     EndIf
     If done || ShownLocation.IsDisabled()
-        NQT_Native.Log("PollLocation: " + ShownLocation + " discovered, entered or disabled (interior " + ShownInterior + ")")
+        NQT_Native.Log("PollLocation: " + ShownLocation + " discovered, entered, found or disabled (kind " + ShownLocationKind() + ")")
         ClearLocation()
         If NQT_AutoTrack.GetValue() != 0.0
             Track(true)
@@ -914,13 +934,21 @@ Function PollLocation()
 EndFunction
 
 Function SetLocationText()
-    NQT_Native.SetObjectiveText(NQT_LocationQuest, LocationObjective, LocationLabel(ShownLocation, ShownLocationNamed, ShownInterior, IsRussian()))
+    NQT_Native.SetObjectiveText(NQT_LocationQuest, LocationObjective, LocationLabel(ShownLocation, ShownLocationNamed, ShownLocationKind(), IsRussian()))
 EndFunction
 
 ; Objective text and notification: "Location: <name>", or "Undiscovered location: <icon type>" for a location
-; not on the map (the compass shows only its icon); "Interior: <name>" for the door into an interior.
-String Function LocationLabel(ObjectReference akMarker, Bool abNamed, Bool abInterior, Bool abRussian)
-    If abInterior
+; not on the map (the compass shows only its icon); "Interior: <name>" for the door into an interior (aiKind
+; KindInterior); the item name for a bobblehead (KindBobblehead: it already says "Bobblehead").
+String Function LocationLabel(ObjectReference akMarker, Bool abNamed, Int aiKind, Bool abRussian)
+    If aiKind == KindBobblehead
+        String bobblehead = NQT_Native.GetBobbleheadName(akMarker)
+        If bobblehead != ""
+            Return bobblehead
+        EndIf
+        Return Choose(abRussian, "Пупс", "Bobblehead")
+    EndIf
+    If aiKind == KindInterior
         String interior = NQT_Native.GetInteriorName(akMarker)
         If interior != ""
             Return Choose(abRussian, "Интерьер: ", "Interior: ") + interior
@@ -941,10 +969,17 @@ String Function LocationLabel(ObjectReference akMarker, Bool abNamed, Bool abInt
 EndFunction
 
 ; Name for the exclusion list and notifications: the location's name, or "undiscovered location (<type>)"; the
-; interior's name for a door.
-String Function LocationName(ObjectReference akMarker, Bool abNamed, Bool abInterior, Bool abRussian)
+; interior's name for a door; the item name for a bobblehead.
+String Function LocationName(ObjectReference akMarker, Bool abNamed, Int aiKind, Bool abRussian)
     String name = ""
-    If abInterior
+    If aiKind == KindBobblehead
+        name = NQT_Native.GetBobbleheadName(akMarker)
+        If name == ""
+            name = Choose(abRussian, "пупс", "bobblehead")
+        EndIf
+        Return name
+    EndIf
+    If aiKind == KindInterior
         name = NQT_Native.GetInteriorName(akMarker)
         If name == ""
             name = Choose(abRussian, "интерьер", "interior")
@@ -987,12 +1022,12 @@ EndFunction
 
 ; What the exclude hotkey means: the target the mod marked last, if it is still marked; otherwise the nearest of
 ; the tracked Pip-Boy quests; otherwise a start or location marker still shown. Returns its kind (the target is
-; LastTracked, ShownStart or ShownLocation; KindLocation or KindInterior for the latter); KindNone if nothing is
-; marked.
+; LastTracked, ShownStart or ShownLocation; KindLocation, KindInterior or KindBobblehead for the latter); KindNone if
+; nothing is marked.
 Int Function PickToExclude()
     Bool startShown = ShownStart && NQT_StartQuest.IsActive() && !NQT_ExcludedList.HasForm(ShownStart)
     Bool locationShown = ShownLocation && NQT_LocationQuest.IsObjectiveDisplayed(LocationObjective)
-    If (LastKind == KindLocation || LastKind == KindInterior) && locationShown
+    If IsLocationKind(LastKind) && locationShown
         Return ShownLocationKind()
     EndIf
     If LastKind == KindStart && startShown && LastTracked == ShownStart
@@ -1036,7 +1071,15 @@ Int Function PickToExclude()
     Return KindNone
 EndFunction
 
+; Kinds whose marker is the location marker (NQT_LocationQuest): a map marker, an interior door, a bobblehead.
+Bool Function IsLocationKind(Int aiKind)
+    Return aiKind == KindLocation || aiKind == KindInterior || aiKind == KindBobblehead
+EndFunction
+
 Int Function ShownLocationKind()
+    If ShownBobblehead
+        Return KindBobblehead
+    EndIf
     If ShownInterior
         Return KindInterior
     EndIf
@@ -1058,8 +1101,8 @@ Function RemoveExcludedAt(Int aiIndex)
     ExcludedKinds.Remove(aiIndex)
 EndFunction
 
-; Done targets leave the exclusion list (the exclusion was for that run of the quest; a discovered location or an
-; entered interior has nothing left to skip). A quest with a start point (QuestStarts.json) is often not running before it starts, so
+; Done targets leave the exclusion list (the exclusion was for that run of the quest; a discovered location, an
+; entered interior or a found bobblehead has nothing left to skip). A quest with a start point (QuestStarts.json) is often not running before it starts, so
 ; only completion counts there.
 Function Cleanup()
     Bool changed = false
@@ -1071,6 +1114,8 @@ Function Cleanup()
             done = !marker || marker.CanFastTravelToMarker()
         ElseIf ExcludedKinds[i] == KindInterior
             done = NQT_Native.IsInteriorVisited(ExcludedItems[i] as ObjectReference)
+        ElseIf ExcludedKinds[i] == KindBobblehead
+            done = NQT_Native.IsBobbleheadFound(ExcludedItems[i] as ObjectReference)
         Else
             Quest q = ExcludedItems[i] as Quest
             done = !q || q.IsCompleted() || (!q.IsRunning() && !NQT_Native.HasQuestStart(q))
@@ -1107,6 +1152,9 @@ Function SyncExcluded()
         ElseIf ExcludedKinds[i] == KindInterior
             NQT_ExcludedLocationList.AddForm(ExcludedItems[i])  ; the DLL skips the door's interior
             prefix = Choose(russian, "Интерьер: ", "Interior: ")
+        ElseIf ExcludedKinds[i] == KindBobblehead
+            NQT_ExcludedLocationList.AddForm(ExcludedItems[i])
+            prefix = ""     ; the item name says "Bobblehead" itself
         Else
             NQT_ExcludedList.AddForm(ExcludedItems[i])
             If ExcludedKinds[i] == KindStart

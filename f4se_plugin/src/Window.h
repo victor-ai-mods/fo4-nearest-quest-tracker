@@ -8,18 +8,21 @@ namespace NQT::Window
 	//   GetLanguage(): "ru", "en", ... (the game's sLanguage).
 	//   GetQuests(): rows of the "Quests" tab, in the order the track hotkey picks them (see QuestDistance.h
 	//     FindNearest), then the quests it cannot pick: Pip-Boy quests, start points available now, then every
-	//     quest that QuestCategories.json or QuestStarts.json know and that is not started or completed.
+	//     quest that QuestCategories.json or QuestStarts.json know and that is not started or completed. Bobbleheads
+	//     (Bobbleheads.h) are rows of this tab too, in the category "bobbleheads": those not found yet among the
+	//     pickable rows (kind 6, state 9), the found ones at the end (kind 0, state 4).
 	//   GetLocations(): rows of the "Locations" tab: map locations not discovered yet (all of them, `seen` = the
 	//     hotkey would pick it without "All locations") and interiors never entered, in the hotkey's order.
-	//   GetCategories(): the quest tree [{key, name}], parent before children, "other" last.
+	//   GetCategories(): the quest tree [{key, name}], parent before children, then "bobbleheads", "other" last.
 	// Row members (FormIDs are signed ints: they go back to Papyrus as Int through f4se.SendExternalEvent):
 	//   kind: the Kind* of NQT_MainScript to act on the row with (1 Pip-Boy quest, 2 Pip-Boy quest without a
-	//     marker, 3 start point, 4 location, 5 interior; 0 none); quest, ref: FormIDs (ref: where the start or
+	//     marker, 3 start point, 4 location, 5 interior, 6 bobblehead; 0 none); quest, ref: FormIDs (ref: where the start or
 	//     location marker goes); name; world: name of the root world; worldRank: 0 the player's world, 1 the
 	//     Commonwealth, 2 Far Harbor, 3 Nuka-World, 4 other, 5 unknown; dist: game units, -1 no distance
 	//     (no marker), -2 in another worldspace with no way known; tracked: marked now (a Pip-Boy quest is active,
 	//     the mod's start or location marker is on it); excluded: on the mod's exclusion list.
-	//   Quest rows also: state (1 in the Pip-Boy, 2 can be started now, 3 not started, 4 completed),
+	//   Quest rows also: state (1 in the Pip-Boy, 2 can be started now, 3 not started, 4 completed / bobblehead
+	//     found, 5-8 see QuestState in Window.cpp, 9 bobblehead not found),
 	//     category (key of QuestCategories.h).
 	//   Location rows also: type (icon type name, "" if unknown), onMap (named on the Pip-Boy map), seen.
 	void Register();

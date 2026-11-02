@@ -1,5 +1,6 @@
 #include "Window.h"
 
+#include "Bobbleheads.h"
 #include "Interiors.h"
 #include "MapMarkers.h"
 #include "QuestCategories.h"
@@ -33,6 +34,7 @@ namespace NQT::Window
 			kStart = 3,
 			kLocation = 4,
 			kInterior = 5,
+			kBobblehead = 6,
 		};
 
 		enum class QuestState : std::int32_t
@@ -45,7 +47,11 @@ namespace NQT::Window
 			kClosed = 6,      // FindStartClosure: its faction is hostile (kicked the player out)
 			kGiverHostile = 7,  // IsStartGiverHostile: the giver would fight the player
 			kRunningNotTaken = 8,  // the game runs it (e.g. a radiant waiting for its giver), not in the Pip-Boy
+			kBobbleheadNotFound = 9,  // a bobblehead row (found ones: kCompleted)
 		};
+
+		// Category of the bobblehead rows: a top-level node of the quest tree (BuildCategories).
+		constexpr auto kBobbleheadCategory = "bobbleheads"sv;
 
 		// Row distances that are not distances.
 		constexpr double kNoDistance = -1.0;
@@ -213,13 +219,18 @@ namespace NQT::Window
 				return a_candidate.quest && IsPointerBlocked(*a_candidate.quest);
 			});
 			std::ranges::move(CollectStartCandidates(true, true), std::back_inserter(candidates));
+			std::ranges::move(CollectBobbleheadCandidates(), std::back_inserter(candidates));
 			SortByTrackOrder(candidates);
+			const auto shownLocation = ShownMarkerID(kLocationQuestID);
+			const auto excludedLocations = FormsOf(kExcludedLocationsID);
 
 			// A quest with several start points: its nearest one (the first in track order).
 			std::unordered_set<const RE::TESQuest*>             listed;
 			std::vector<std::pair<const Candidate*, std::string>> picked;
 			for (const auto& candidate : candidates) {
-				if (candidate.quest && listed.insert(candidate.quest).second) {
+				if (candidate.bobblehead && candidate.location) {
+					picked.emplace_back(&candidate, GetBobbleheadName(*candidate.location));
+				} else if (candidate.quest && listed.insert(candidate.quest).second) {
 					picked.emplace_back(&candidate, QuestName(*candidate.quest, !candidate.start));
 				}
 			}
@@ -246,7 +257,9 @@ namespace NQT::Window
 			// added - only when that tells all of them apart (the eight Automatron "Rogue Robot" have the same one).
 			std::unordered_map<std::string, std::vector<const RE::TESQuest*>> byName;
 			for (const auto& [candidate, name] : picked) {
-				byName[name].push_back(candidate->quest);
+				if (candidate->quest) {
+					byName[name].push_back(candidate->quest);
+				}
 			}
 			for (const auto& entry : rest) {
 				byName[entry.name].push_back(entry.quest);
@@ -277,6 +290,15 @@ namespace NQT::Window
 			};
 
 			for (auto& [candidate, name] : picked) {
+				if (candidate->bobblehead) {
+					const auto refID = candidate->location->GetFormID();
+					auto       row = builder.Row(Kind::kBobblehead, nullptr, refID, name, candidate->world, RowDistance(*candidate),
+						shownLocation != 0 && shownLocation == refID, excludedLocations.contains(candidate->location));
+					row.SetMember("state", GFxValue(std::to_underlying(QuestState::kBobbleheadNotFound)));
+					row.SetMember("category", builder.String(std::string{ kBobbleheadCategory }));
+					rows.PushBack(row);
+					continue;
+				}
 				const auto& quest = *candidate->quest;
 				distinct(quest, name);
 				const auto kind = candidate->start ? Kind::kStart : candidate->noMarker ? Kind::kNoMarker : Kind::kQuest;
@@ -329,8 +351,22 @@ namespace NQT::Window
 				row.SetMember("category", builder.String(entry.category));
 				rows.PushBack(row);
 			}
-			logger::info("window: GetQuests -> {} rows ({} pickable) in {:.1f} ms"sv, pickable + rest.size(), pickable,
-				MillisecondsSince(start));
+			// Found bobbleheads, after the completed quests.
+			std::size_t found = 0;
+			for (const auto& bobblehead : GetBobbleheads()) {
+				if (!IsBobbleheadFound(bobblehead)) {
+					continue;
+				}
+				const auto root = RootOf(*bobblehead.ref);
+				auto       row = builder.Row(Kind::kNone, nullptr, bobblehead.ref->GetFormID(), GetBobbleheadName(*bobblehead.ref),
+					root ? root->world : nullptr, kNoDistance, false, false);
+				row.SetMember("state", GFxValue(std::to_underlying(QuestState::kCompleted)));
+				row.SetMember("category", builder.String(std::string{ kBobbleheadCategory }));
+				rows.PushBack(row);
+				++found;
+			}
+			logger::info("window: GetQuests -> {} rows ({} pickable, {} bobbleheads found) in {:.1f} ms"sv,
+				pickable + rest.size() + found, pickable, found, MillisecondsSince(start));
 			return rows;
 		}
 
@@ -393,6 +429,12 @@ namespace NQT::Window
 			};
 			for (const auto& category : GetQuestCategories()) {
 				add(category.key);
+			}
+			if (!GetBobbleheads().empty()) {
+				auto row = builder.Object();
+				row.SetMember("key", builder.String(std::string{ kBobbleheadCategory }));
+				row.SetMember("name", builder.String(language == "ru"sv ? "Пупсы"s : "Bobbleheads"s));
+				rows.PushBack(row);
 			}
 			add(std::string{ kOtherCategory });
 			return rows;

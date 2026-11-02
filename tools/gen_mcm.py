@@ -9,7 +9,7 @@
 Один хоткей «Отметить ближайшее» (TrackNearest); что он выбирает — switcher'ы «Что выбирать» прямо на глобальные
 переменные (sourceType GlobalValue, как во FSOC): NQT_IncludeQuests, NQT_IncludeNoMarker, NQT_IncludeStarts,
 NQT_NoSpoilers (action OnNoSpoilersChanged переписывает текст показанного маркера старта), NQT_IncludeLocations,
-NQT_AllLocations, NQT_IncludeInteriors, NQT_SkipOwnedLocked; настройки NQT_UntrackOthers «только один маркер», NQT_AutoTrack (action OnAutoTrackChanged
+NQT_AllLocations, NQT_IncludeInteriors, NQT_SkipOwnedLocked, NQT_IncludeBobbleheads; настройки NQT_UntrackOthers «только один маркер», NQT_AutoTrack (action OnAutoTrackChanged
 запускает/останавливает таймер), NQT_Notifications, NQT_ShowQuestInWindow (хоткей «Показать текущий квест» — окном). Значения живут в сохранении, скрипт читает их при каждом нажатии.
 
 Общий список исключённого (квесты, новые квесты, локации, интерьеры) — dropdown с недокументированным ключом MCM
@@ -17,7 +17,7 @@ NQT_AllLocations, NQT_IncludeInteriors, NQT_SkipOwnedLocked; настройки 
 Neanka/MCM_0.1_AS3 MCM_Menu.as перечитывает список при загрузке страницы и в RefreshMCM, reg2k/f4mcm
 GetPropertyValueEx отдаёт массивы. Значение — PropertyValueInt MCMRestoreChoice; выбор пункта вызывает
 RestoreFromMenu({value}), тот убирает пункт и зовёт MCM.RefreshMenu(), чтобы список перечитался. Кнопки «Вернуть всё /
-активные квесты / новые квесты / локации / интерьеры» — RestoreAll / RestoreKind(вид).
+активные квесты / новые квесты / локации / интерьеры / пупсов» — RestoreAll / RestoreKind(вид).
 
     python tools/gen_mcm.py
 """
@@ -44,6 +44,7 @@ INCLUDE_LOCATIONS_GLOBAL = PLUGIN + '|80D'
 INCLUDE_INTERIORS_GLOBAL = PLUGIN + '|80E'
 SKIP_OWNED_LOCKED_GLOBAL = PLUGIN + '|80F'
 SHOW_QUEST_IN_WINDOW_GLOBAL = PLUGIN + '|810'
+INCLUDE_BOBBLEHEADS_GLOBAL = PLUGIN + '|814'
 
 # id хоткеев те же, что в 1.0: назначенные пользователем клавиши сохраняются.
 HOTKEYS = [
@@ -60,12 +61,13 @@ KIND_QUEST = 1
 KIND_START = 3
 KIND_LOCATION = 4
 KIND_INTERIOR = 5
+KIND_BOBBLEHEAD = 6
 
 STRINGS = {
     'en': {
         'MOD_NAME': 'Nearest Quest Tracker',
         'ABOUT': 'The hotkey marks the nearest target: a Pip-Boy quest, the start of a new quest, an undiscovered '
-                 'location or an interior you have not been inside, whichever are turned on below. Targets in your current world come first, then the '
+                 'location, an interior you have not been inside or a bobblehead, whichever are turned on below. Targets in your current world come first, then the '
                  'Commonwealth, Far Harbor and Nuka-World.',
         'SEC_KEYS': 'Hotkeys',
         'KEY_TRACK_NEAREST': 'Mark nearest',
@@ -111,6 +113,9 @@ STRINGS = {
         'SKIP_OWNED_LOCKED': 'Skip locked doors of others',
         'SKIP_OWNED_LOCKED_HELP': 'Interiors behind a locked door that is a crime to pick (red "Pick" prompt) are skipped. '
                                   "With its key, or in the owner's faction, the door is yours.",
+        'INCLUDE_BOBBLEHEADS': 'Pick bobbleheads',
+        'INCLUDE_BOBBLEHEADS_HELP': 'Bobbleheads you have not picked up yet (the marker is on the bobblehead itself). '
+                                    'The window lists them under "Bobbleheads" in the Quests tab.',
         'SEC_MAIN': 'Settings',
         'UNTRACK_OTHERS': 'Only one marker',
         'UNTRACK_OTHERS_HELP': 'When on, the hotkey removes all other markers: other tracked quests, the new quest '
@@ -144,11 +149,13 @@ STRINGS = {
         'RESTORE_LOCATIONS_HELP': 'Takes back all excluded locations.',
         'RESTORE_INTERIORS': 'Restore interiors',
         'RESTORE_INTERIORS_HELP': 'Takes back all excluded interiors.',
+        'RESTORE_BOBBLEHEADS': 'Restore bobbleheads',
+        'RESTORE_BOBBLEHEADS_HELP': 'Takes back all excluded bobbleheads.',
     },
     'ru': {
         'MOD_NAME': 'Nearest Quest Tracker',
-        'ABOUT': 'Хоткей отмечает ближайшую цель: квест из Pip-Boy, начало нового квеста, неоткрытую локацию или '
-                 'интерьер, где вы не были, — что включено ниже. Сначала цели мира, где вы сейчас, потом Содружества, Фар-Харбора и Ядер-Мира.',
+        'ABOUT': 'Хоткей отмечает ближайшую цель: квест из Pip-Boy, начало нового квеста, неоткрытую локацию, '
+                 'интерьер, где вы не были, или пупса — что включено ниже. Сначала цели мира, где вы сейчас, потом Содружества, Фар-Харбора и Ядер-Мира.',
         'SEC_KEYS': 'Хоткеи',
         'KEY_TRACK_NEAREST': 'Отметить ближайшее',
         'KEY_TRACK_NEAREST_HELP': 'Отмечает ближайшую цель из выбранных ниже. Расстояние до квеста — по маршруту '
@@ -192,6 +199,9 @@ STRINGS = {
                                   'Двери, которым нужен ключ, пропускаются.',
         'SKIP_OWNED_LOCKED': 'Пропускать чужие запертые',
         'SKIP_OWNED_LOCKED_HELP': 'Пропускать интерьеры за запертой дверью, взлом которой — преступление (красное «Взломать»). С ключом или во фракции владельца дверь ваша.',
+        'INCLUDE_BOBBLEHEADS': 'Выбирать пупсов',
+        'INCLUDE_BOBBLEHEADS_HELP': 'Пупсы, которых вы ещё не подобрали (маркер — на самом пупсе). В окне они — в '
+                                    'разделе «Пупсы» вкладки «Квесты».',
         'SEC_MAIN': 'Настройки',
         'UNTRACK_OTHERS': 'Только один маркер',
         'UNTRACK_OTHERS_HELP': 'Если включено, хоткей убирает все остальные маркеры: другие отмеченные квесты, маркер '
@@ -225,6 +235,8 @@ STRINGS = {
         'RESTORE_LOCATIONS_HELP': 'Возвращает все исключённые локации.',
         'RESTORE_INTERIORS': 'Вернуть интерьеры',
         'RESTORE_INTERIORS_HELP': 'Возвращает все исключённые интерьеры.',
+        'RESTORE_BOBBLEHEADS': 'Вернуть пупсов',
+        'RESTORE_BOBBLEHEADS_HELP': 'Возвращает всех исключённых пупсов.',
     },
 }
 
@@ -273,6 +285,7 @@ def config():
         global_switcher('ALL_LOCATIONS', ALL_LOCATIONS_GLOBAL),
         global_switcher('INCLUDE_INTERIORS', INCLUDE_INTERIORS_GLOBAL),
         global_switcher('SKIP_OWNED_LOCKED', SKIP_OWNED_LOCKED_GLOBAL),
+        global_switcher('INCLUDE_BOBBLEHEADS', INCLUDE_BOBBLEHEADS_GLOBAL),
         {'type': 'spacer'},
         {'type': 'section', 'text': t('SEC_MAIN')},
         global_switcher('UNTRACK_OTHERS', UNTRACK_OTHERS_GLOBAL),
@@ -291,6 +304,7 @@ def config():
         button('RESTORE_STARTS', 'RestoreKind', [KIND_START]),
         button('RESTORE_LOCATIONS', 'RestoreKind', [KIND_LOCATION]),
         button('RESTORE_INTERIORS', 'RestoreKind', [KIND_INTERIOR]),
+        button('RESTORE_BOBBLEHEADS', 'RestoreKind', [KIND_BOBBLEHEAD]),
     ]
     return {
         'modName': MOD,

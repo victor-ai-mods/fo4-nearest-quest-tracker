@@ -46,6 +46,7 @@ configure_file(
 add_library(
 	"${PROJECT_NAME}"
 	SHARED
+	src/Bobbleheads.cpp
 	src/Interiors.cpp
 	src/main.cpp
 	src/MapMarkers.cpp

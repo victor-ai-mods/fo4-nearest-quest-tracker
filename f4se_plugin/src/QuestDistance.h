@@ -33,8 +33,8 @@ namespace NQT
 
 	// One place the player can be sent to: the nearest target of a Pip-Boy quest, the start point of a
 	// quest not started yet (QuestStarts.h), a Pip-Boy quest without any marker (only its world is known),
-	// a map marker not discovered yet (MapMarkers.h; quest is null), or an interior the player has never been
-	// inside (Interiors.h; location is the door into it from a worldspace).
+	// a map marker not discovered yet (MapMarkers.h; quest is null), an interior the player has never been
+	// inside (Interiors.h; location is the door into it from a worldspace), or a bobblehead (Bobbleheads.h).
 	struct Candidate
 	{
 		RE::TESQuest*              quest{ nullptr };        // null for a location
@@ -47,6 +47,7 @@ namespace NQT
 		std::uint32_t              markerID{ 0 };           // start point: FormID of the ref to put the marker on
 		const RE::TESWorldSpace*   world{ nullptr };        // root worldspace of the place; null if not known
 		bool                       noMarker{ false };       // Pip-Boy quest without a marker: distance is not used
+		bool                       bobblehead{ false };     // a bobblehead not found yet (Bobbleheads.h): location is its ref
 	};
 
 	// A point in one of the root worldspaces (Commonwealth, Far Harbor, Nuka-World, ...).
@@ -154,4 +155,12 @@ namespace NQT
 
 	// Writes every quest target the player has, with objective states and distances, to the log.
 	void DumpQuestTargets();
+
+	// Engine bug (found 2026-11-02, a "Supermarket" marker left on the map next to the marked interior): when an
+	// alias stops holding a ref while the engine still builds the path to it (REF_DATA +0x58), that REF_DATA is
+	// never checked again and keeps its marker for the rest of the session (EngineTypes.h QuestTargetRefData).
+	// For a_quest's objectives this takes the finished build of every REF_DATA whose ref is no longer in any alias;
+	// TESQuestTarget::UpdateTargetArray then deletes it on the next compass update (every frame while the
+	// objective is shown). Returns how many were released; a build still running is left for the next call.
+	std::size_t ReleaseStaleTargets(const RE::TESQuest& a_quest);
 }

@@ -116,3 +116,16 @@ String Function GetQuestCategory(Quest akQuest) native global
 ; Name of a category key in the game language ("Побочные квесты" / "Side quests"); for "other.<plugin>" the plugin
 ; file name, for "other" "Другие квесты" / "Other quests"; "" if the key is unknown.
 String Function GetQuestCategoryName(String asKey) native global
+
+; True once the player has picked up the bobblehead akRef (has its perk, or its PerksQuest stage is done - what the
+; vanilla bobblehead scripts check); true also if akRef is no bobblehead of Bobbleheads.json.
+Bool Function IsBobbleheadFound(ObjectReference akRef) native global
+
+; The bobblehead's item name in the game language ("Пупс "Сила"" / "Strength Bobblehead"); "" if akRef is none.
+String Function GetBobbleheadName(ObjectReference akRef) native global
+
+; Engine workaround for the marker quests (NQT_StartQuest, NQT_LocationQuest): a ref that left the alias while the
+; engine was building the path to it keeps its marker on the map and compass for the rest of the session. Call
+; after changing or clearing the alias, and from the polls (a path build may still be running). Returns how many
+; such stale targets were released (the engine removes them on the next compass update).
+Int Function ReleaseStaleTargets(Quest akQuest) native global

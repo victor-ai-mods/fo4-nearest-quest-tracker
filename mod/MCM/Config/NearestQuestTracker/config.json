@@ -180,6 +180,15 @@
             }
         },
         {
+            "type": "switcher",
+            "text": "$NQT_INCLUDE_BOBBLEHEADS",
+            "help": "$NQT_INCLUDE_BOBBLEHEADS_HELP",
+            "valueOptions": {
+                "sourceType": "GlobalValue",
+                "sourceForm": "NearestQuestTracker.esp|814"
+            }
+        },
+        {
             "type": "spacer"
         },
         {
@@ -326,6 +335,20 @@
                 "function": "RestoreKind",
                 "params": [
                     5
+                ]
+            }
+        },
+        {
+            "type": "button",
+            "text": "$NQT_RESTORE_BOBBLEHEADS",
+            "help": "$NQT_RESTORE_BOBBLEHEADS_HELP",
+            "action": {
+                "type": "CallFunction",
+                "form": "NearestQuestTracker.esp|800",
+                "scriptName": "NQT_MainScript",
+                "function": "RestoreKind",
+                "params": [
+                    6
                 ]
             }
         }
